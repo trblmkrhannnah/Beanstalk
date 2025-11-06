@@ -1,0 +1,216 @@
+@page "/edit/images"
+@rendermode InteractiveServer
+
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_loading)
+            {
+                <p>Loading...</p>
+            }
+            else if (_profile is null || _user is null)
+            {
+                <p>Profile not found.</p>
+            }
+            else
+            {
+            <h3>Profile Images</h3>
+            <p class="text-muted">@_images.Count of @_maxImages images</p>
+
+            <button class="btn btn-primary mb-3" @onclick="ShowUploadModal" disabled="@(_images.Count >= _maxImages)">
+                Upload New Image
+            </button>
+
+            @if (_images.Count >= _maxImages)
+            {
+                <p class="text-warning">You have reached the maximum number of images allowed.</p>
+            }
+
+            @if (_images.Count == 0)
+            {
+                <p>No images uploaded yet.</p>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var img in _images)
+                    {
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <div class="card">
+                                <div class="position-relative">
+                                    <img src="/api/profile-images/@img.Id" class="card-img-top" alt="Profile Image" style="aspect-ratio: 1; object-fit: cover; border-radius: 50%; padding: 1rem;" />
+                                    @if (_profile.SelectedImageId == img.Id)
+                                    {
+                                        <span class="badge bg-success position-absolute top-0 end-0 m-2">Default</span>
+                                    }
+                                </div>
+                                <div class="card-body text-center">
+                                    @if (_profile.SelectedImageId != img.Id)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="(() => SetAsDefault(img.Id))">
+                                            Set as Default
+                                        </button>
+                                    }
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteImage(img.Id))">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        @if (_showUploadModal)
+        {
+            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Upload Profile Image</h5>
+                            <button type="button" class="btn-close" @onclick="CloseUploadModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            @if (_uploadError != null)
+                            {
+                                <div class="alert alert-danger">@_uploadError</div>
+                            }
+                            
+                            <div>
+                                <label for="imageFile" class="form-label">Select an image (max 10MB)</label>
+                                <input type="file" id="imageFile" class="form-control" accept="image/jpeg,image/png,image/webp" onchange="handleImageFileSelected(this)" />
+                                <small class="text-muted">Supported formats: JPEG, PNG, WebP</small>
+                            </div>
+                            
+                            <div id="cropperContainer" style="max-height: 500px; overflow: hidden; display: none; margin-top: 1rem;">
+                                <p>Crop your image to a square (1024x1024px):</p>
+                                <img id="cropperImage" style="max-width: 100%;" />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseUploadModal">Cancel</button>
+                            <button type="button" id="saveUploadBtn" class="btn btn-primary" onclick="saveAndUploadImage()" style="display: none;">
+                                <span id="uploadBtnText">Save & Upload</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        </Authorized>
+        <NotAuthorized>
+            <p>Please <a href="/config/login">log in</a>.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    private UserProfile? _profile;
+    private List<ProfileImage> _images = new();
+    private bool _loading = true;
+    private int _maxImages = 10;
+    
+    private bool _showUploadModal = false;
+    private string? _uploadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+        if (_user != null)
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            _profile = await db.UserProfiles
+                .AsNoTracking()
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            
+            if (_profile != null)
+            {
+                _images = _profile.Images.OrderByDescending(i => i.CreatedUtc).ToList();
+            }
+            
+            // Get max images setting
+            var maxImagesSetting = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == "MaxImagesPerUser");
+            if (maxImagesSetting != null && int.TryParse(maxImagesSetting.Value, out var parsedMax))
+            {
+                _maxImages = parsedMax;
+            }
+        }
+        _loading = false;
+    }
+
+    private void ShowUploadModal()
+    {
+        _showUploadModal = true;
+        _uploadError = null;
+        StateHasChanged();
+    }
+
+    private async Task CloseUploadModal()
+    {
+        _showUploadModal = false;
+        _uploadError = null;
+        await JS.InvokeVoidAsync("resetUploadModal");
+        StateHasChanged();
+    }
+
+    private async Task SetAsDefault(Guid imageId)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("fetch", $"/api/profile-images/{imageId}/set-default", new
+            {
+                method = "POST",
+                credentials = "include"
+            });
+            
+            // Reload to update UI
+            Nav.NavigateTo("/edit/images", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error setting default: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteImage(Guid imageId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this image?"))
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("fetch", $"/api/profile-images/{imageId}", new
+            {
+                method = "DELETE",
+                credentials = "include"
+            });
+            
+            // Reload to update UI
+            Nav.NavigateTo("/edit/images", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting image: {ex.Message}");
+        }
+    }
+}
+

@@ -1,0 +1,53 @@
+@page "/home/login"
+
+@using System.ComponentModel.DataAnnotations
+@using Beanstalk.Database.Entities
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+<EditForm Model="Model" OnValidSubmit="LoginAsync" FormName="login" method="post">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label for="login-username">Username</label>
+        <InputText id="login-username" class="form-control" @bind-Value="Model.Username" />
+    </div>
+    <div class="mb-3">
+        <label for="login-password">Password</label>
+        <InputText id="login-password" class="form-control" @bind-Value="Model.Password" type="password" />
+    </div>
+    <button class="btn btn-primary" type="submit">Login</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginModel Model { get; set; } = new();
+
+    private async Task LoginAsync()
+    {
+        var result = await SignInManager.PasswordSignInAsync(Model.Username, Model.Password, true, lockoutOnFailure: false);
+        if (result.Succeeded)
+        {
+            Nav.NavigateTo("/edit/dashboard", true);
+        }
+        else
+        {
+            _error = "Invalid username or password.";
+        }
+    }
+
+    private string? _error;
+
+    private class LoginModel
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}
+
+

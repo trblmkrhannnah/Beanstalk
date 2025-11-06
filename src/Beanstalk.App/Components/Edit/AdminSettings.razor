@@ -1,0 +1,76 @@
+@page "/edit/admin/settings"
+
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@inject ApplicationDbContext Db
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h3>Admin Settings</h3>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="regsOpen" @bind="_registrationsOpen" />
+            <label class="form-check-label" for="regsOpen">Registrations Open</label>
+        </div>
+        <div class="mb-3 mt-3">
+            <label for="maxImages" class="form-label">Max Images Per User</label>
+            <input type="number" class="form-control" id="maxImages" @bind="_maxImagesPerUser" min="1" max="100" />
+            <small class="text-muted">Maximum number of profile images each user can upload (default: 10)</small>
+        </div>
+        <button class="btn btn-primary mt-2" @onclick="SaveAsync">Save</button>
+        @if (_saved)
+        {
+            <div>Saved.</div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>Not authorized.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool _registrationsOpen = true;
+    private int _maxImagesPerUser = 10;
+    private bool _saved;
+
+    protected override void OnInitialized()
+    {
+        var regSetting = Db.AppSettings.Find("RegistrationsOpen");
+        _registrationsOpen = !(regSetting?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? false);
+
+        var maxImagesSetting = Db.AppSettings.Find("MaxImagesPerUser");
+        if (maxImagesSetting != null && int.TryParse(maxImagesSetting.Value, out var maxImages))
+        {
+            _maxImagesPerUser = maxImages;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        var regSetting = Db.AppSettings.Find("RegistrationsOpen");
+        if (regSetting == null)
+        {
+            regSetting = new AppSetting { Key = "RegistrationsOpen", Value = _registrationsOpen ? "true" : "false" };
+            Db.AppSettings.Add(regSetting);
+        }
+        else
+        {
+            regSetting.Value = _registrationsOpen ? "true" : "false";
+        }
+
+        var maxImagesSetting = Db.AppSettings.Find("MaxImagesPerUser");
+        if (maxImagesSetting == null)
+        {
+            maxImagesSetting = new AppSetting { Key = "MaxImagesPerUser", Value = _maxImagesPerUser.ToString() };
+            Db.AppSettings.Add(maxImagesSetting);
+        }
+        else
+        {
+            maxImagesSetting.Value = _maxImagesPerUser.ToString();
+        }
+
+        await Db.SaveChangesAsync();
+        _saved = true;
+    }
+}
+
+

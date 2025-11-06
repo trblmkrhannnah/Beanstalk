@@ -1,0 +1,132 @@
+@page "/edit/appearance"
+@rendermode InteractiveServer
+
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_loading)
+            {
+                <p>Loading...</p>
+            }
+            else if (_profile is null || _user is null)
+            {
+                <p>Profile not found.</p>
+            }
+            else
+            {
+                <h3>Theme</h3>
+                <p class="text-muted">Choose a color palette for your profile page</p>
+
+                @if (_palettes.Count == 0)
+                {
+                    <p class="text-warning">No palettes available. Please restart the application to seed default
+                        palettes.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        @foreach (var palette in _palettes)
+                        {
+                            var isSelected = _selectedPaletteId == palette.Id;
+                            <div class="palette-card @(isSelected ? "selected" : "")"
+                                 @onclick="@(() => SelectPalette(palette.Id))"
+                                 style="cursor: pointer; padding: 10px; border: 3px solid @(isSelected ? "#0d6efd" : "#dee2e6"); border-radius: 8px; background: white;">
+                                <div class="d-flex flex-wrap"
+                                     style="width: 180px; height: 60px; border-radius: 4px; overflow: hidden;">
+                                    <div
+                                        style="width: 60px; height: 30px; background: @palette.BackgroundGradient1;"></div>
+                                    <div
+                                        style="width: 60px; height: 30px; background: @palette.BackgroundGradient2;"></div>
+                                    <div style="width: 60px; height: 30px; background: @palette.TitleColor;"></div>
+                                    <div style="width: 60px; height: 30px; background: @palette.ContentColor;"></div>
+                                    <div
+                                        style="width: 60px; height: 30px; background: @palette.ContainerBackground;"></div>
+                                    <div
+                                        style="width: 60px; height: 30px; background: @palette.ContainerForeground;"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <button type="button" class="btn btn-primary" @onclick="SaveAsync">Save</button>
+                @if (_saved)
+                {
+                    <span class="ms-2 text-success">Saved.</span>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <p>Please <a href="/config/login">log in</a>.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    private UserProfile? _profile;
+    private List<ThemePalette> _palettes = new();
+    private Guid? _selectedPaletteId;
+    private bool _loading = true;
+    private bool _saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+        if (_user != null)
+        {
+            _profile = await Db.UserProfiles
+                .Include(p => p.ThemePalette)
+                .FirstOrDefaultAsync(p => p.UserId == _user.Id);
+
+            // Create profile if it doesn't exist
+            if (_profile == null)
+            {
+                _profile = new UserProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = _user.Id,
+                    CreatedUtc = DateTime.UtcNow
+                };
+                Db.UserProfiles.Add(_profile);
+                await Db.SaveChangesAsync();
+            }
+
+            _selectedPaletteId = _profile.ThemePaletteId;
+        }
+
+        _palettes = await Db.ThemePalettes.OrderBy(p => p.Name).ToListAsync();
+        _loading = false;
+    }
+
+    private void SelectPalette(Guid paletteId)
+    {
+        _selectedPaletteId = paletteId;
+        _saved = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_profile == null) return;
+
+        _profile.ThemePaletteId = _selectedPaletteId;
+        await Db.SaveChangesAsync();
+        _saved = true;
+        StateHasChanged();
+    }
+
+}
+
+

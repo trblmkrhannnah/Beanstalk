@@ -1,0 +1,120 @@
+@page "/home/register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@inject NavigationManager Nav
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
+
+<h3>Register</h3>
+
+@if (!_registrationsOpen)
+{
+    <p>Registrations are currently closed.</p>
+}
+else
+{
+    <EditForm Model="Model" OnValidSubmit="RegisterAsync" FormName="register" method="post">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="mb-3">
+            <label for="reg-username">Username</label>
+            <InputText id="reg-username" class="form-control" @bind-Value="Model.Username" />
+        </div>
+        <div class="mb-3">
+            <label for="reg-password">Password</label>
+            <InputText id="reg-password" class="form-control" @bind-Value="Model.Password" type="password" />
+        </div>
+        <button class="btn btn-primary" type="submit">Register</button>
+    </EditForm>
+}
+
+@code {
+    private bool _registrationsOpen = true;
+
+    [SupplyParameterFromForm]
+    private RegisterModel Model { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        var setting = Db.AppSettings.Find("RegistrationsOpen");
+        _registrationsOpen = !(setting?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private async Task RegisterAsync()
+    {
+        var username = Model.Username?.Trim() ?? string.Empty;
+        if (username.Length < 6)
+        {
+            _validationMessage = "Username must be at least 5 characters.";
+            return;
+        }
+        if (!Regex.IsMatch(username, "^[a-zA-Z0-9_-]{5,}$"))
+        {
+            _validationMessage = "Only letters, numbers, dashes, and underscores allowed.";
+            return;
+        }
+        if (_reservedUsernames.Contains(username, StringComparer.OrdinalIgnoreCase))
+        {
+            _validationMessage = "That username is reserved.";
+            return;
+        }
+
+        var existing = await UserManager.FindByNameAsync(username);
+        if (existing != null)
+        {
+            _validationMessage = "Username already exists.";
+            return;
+        }
+
+        var user = new ApplicationUser { UserName = username, IsEnabled = true };
+        var result = await UserManager.CreateAsync(user, Model.Password);
+        if (!result.Succeeded)
+        {
+            _validationMessage = string.Join("; ", result.Errors.Select(e => e.Description));
+            return;
+        }
+
+        Db.UserProfiles.Add(new UserProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            CreatedUtc = DateTime.UtcNow
+        });
+        await Db.SaveChangesAsync();
+
+        // First-user-admin bootstrap
+        var userCount = await Db.Users.CountAsync();
+        if (userCount == 1)
+        {
+            const string adminRole = "Admin";
+            if (!await RoleManager.RoleExistsAsync(adminRole))
+            {
+                await RoleManager.CreateAsync(new IdentityRole<Guid>(adminRole));
+            }
+            await UserManager.AddToRoleAsync(user, adminRole);
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: true);
+        Nav.NavigateTo("/edit/dashboard", true);
+    }
+
+    private string? _validationMessage;
+    private static readonly HashSet<string> _reservedUsernames = new(["config","admin","login","register","api","assets","static","_content"]);
+
+    private class RegisterModel
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; } = string.Empty;
+    }
+}
+
+

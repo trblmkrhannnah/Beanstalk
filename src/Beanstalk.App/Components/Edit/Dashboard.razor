@@ -1,0 +1,111 @@
+@page "/edit/"
+@page "/edit/dashboard"
+
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView Context="auth">
+    <Authorized>
+        @if (_loading)
+        {
+            <p>Loading...</p>
+        }
+        else if (_profile is null || _user is null)
+        {
+            <p>Profile not found.</p>
+        }
+        else
+        {
+            <h3>Dashboard</h3>
+            <EditForm Model="Model" OnValidSubmit="SaveAsync" FormName="dashboard" method="post">
+                <DataAnnotationsValidator/>
+                <ValidationSummary/>
+                <div class="form-check form-switch mb-3">
+                    <InputCheckbox class="form-check-input" id="enabled" @bind-Value="Model.UserEnabled"/>
+                    <label class="form-check-label" for="enabled">Page Enabled</label>
+                </div>
+                <div class="mb-3">
+                    <label>Display Name</label>
+                    <InputText class="form-control" @bind-Value="Model.DisplayName"/>
+                </div>
+                <div class="mb-3">
+                    <label>Bio</label>
+                    <InputTextArea class="form-control" @bind-Value="Model.Bio"/>
+                </div>
+                <button class="btn btn-primary" type="submit">Save</button>
+                @if (_saved)
+                {
+                    <span class="ms-2">Saved.</span>
+                }
+            </EditForm>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>Please <a href="/config/login">log in</a>.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private ApplicationUser? _user;
+    private UserProfile? _profile;
+    [SupplyParameterFromForm] private DashboardModel? Model { get; set; }
+    private bool _loading = true;
+    private bool _saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _saved = false;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+
+        if (_user != null)
+        {
+            _profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+
+            if (Model == null)
+            {
+                Model = new();
+                
+                Model.UserEnabled = _user.IsEnabled;
+                Model.DisplayName = _profile?.DisplayName;
+                Model.Bio = _profile?.Bio;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_user == null)
+            return;
+
+        _user.IsEnabled = Model.UserEnabled;
+        await UserManager.UpdateAsync(_user);
+
+        if (_profile == null)
+        {
+            _profile = new UserProfile { Id = Guid.NewGuid(), UserId = _user.Id, CreatedUtc = DateTime.UtcNow };
+            Db.UserProfiles.Add(_profile);
+        }
+
+        _profile.DisplayName = Model.DisplayName;
+        _profile.Bio = Model.Bio;
+        await Db.SaveChangesAsync();
+        _saved = true;
+    }
+
+    private class DashboardModel
+    {
+        public bool UserEnabled { get; set; }
+        public string? DisplayName { get; set; }
+        public string? Bio { get; set; }
+    }
+
+}
+
+

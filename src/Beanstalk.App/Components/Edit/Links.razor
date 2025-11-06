@@ -1,0 +1,175 @@
+@page "/edit/links"
+@rendermode InteractiveServer
+
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_loading)
+            {
+                <p>Loading...</p>
+            }
+            else if (_profile is null || _user is null)
+            {
+                <p>Profile not found.</p>
+            }
+            else
+            {
+                <h3>Links</h3>
+                <button class="btn btn-primary mb-3" @onclick="AddLink">Add Link</button>
+                @foreach (var link in _links)
+                {
+                    <div class="card mb-2 p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-1 text-center">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="(() => MoveUp(link))">↑
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary mt-1" @onclick="(() => MoveDown(link))">
+                                    ↓
+                                </button>
+                            </div>
+                            <div class="col">
+                                <InputText class="form-control" @bind-Value="link.Title" placeholder="Title"/>
+                            </div>
+                            <div class="col">
+                                <InputText class="form-control" @bind-Value="link.Url" placeholder="Url"/>
+                            </div>
+                            <div class="col-2 form-check">
+                                <input class="form-check-input" type="checkbox" @bind="link.IsVisible" id="v@link.Id"/>
+                                <label class="form-check-label" for="v@link.Id">Visible</label>
+                            </div>
+                            <div class="col-2 text-end">
+                                <button class="btn btn-sm btn-danger" @onclick="(() => RemoveLink(link))">Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <button class="btn btn-success" @onclick="SaveAsync">Save Changes</button>
+                @if (_saved)
+                {
+                    <span class="ms-2">Saved.</span>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <p>Please <a href="/config/login">log in</a>.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    private UserProfile? _profile;
+    private List<ProfileLink> _links = new();
+    private bool _loading = true;
+    private bool _saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+        if (_user != null)
+        {
+            _profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            if (_profile != null)
+            {
+                _links = await Db.ProfileLinks.Where(l => l.ProfileId == _profile.Id)
+                    .OrderBy(l => l.SortOrder)
+                    .ToListAsync();
+            }
+        }
+
+        _loading = false;
+    }
+
+    private void AddLink()
+    {
+        var maxOrder = _links.Count == 0 ? 0 : _links.Max(l => l.SortOrder) + 1;
+        _links.Add(new ProfileLink { Id = Guid.NewGuid(), Title = "New Link", Url = "https://", SortOrder = maxOrder, IsVisible = true });
+    }
+
+    private void RemoveLink(ProfileLink link)
+    {
+        _links.Remove(link);
+    }
+
+    private void MoveUp(ProfileLink link)
+    {
+        var index = _links.IndexOf(link);
+        if (index > 0)
+        {
+            _links.RemoveAt(index);
+            _links.Insert(index - 1, link);
+            Reindex();
+        }
+    }
+
+    private void MoveDown(ProfileLink link)
+    {
+        var index = _links.IndexOf(link);
+        if (index >= 0 && index < _links.Count - 1)
+        {
+            _links.RemoveAt(index);
+            _links.Insert(index + 1, link);
+            Reindex();
+        }
+    }
+
+    private void Reindex()
+    {
+        for (int i = 0; i < _links.Count; i++)
+        {
+            _links[i].SortOrder = i;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_user == null || _profile == null) return;
+
+        // Load existing from DB
+        var existing = await Db.ProfileLinks.Where(l => l.ProfileId == _profile.Id).ToListAsync();
+
+        // Delete removed
+        foreach (var e in existing)
+        {
+            if (!_links.Any(l => l.Id == e.Id))
+            {
+                Db.ProfileLinks.Remove(e);
+            }
+        }
+
+        // Upsert current
+        foreach (var l in _links)
+        {
+            var row = existing.FirstOrDefault(e => e.Id == l.Id);
+            if (row == null)
+            {
+                l.ProfileId = _profile.Id;
+                Db.ProfileLinks.Add(l);
+            }
+            else
+            {
+                row.Title = l.Title;
+                row.Url = l.Url;
+                row.IsVisible = l.IsVisible;
+                row.SortOrder = l.SortOrder;
+            }
+        }
+
+        await Db.SaveChangesAsync();
+        _saved = true;
+    }
+
+}
+
+
