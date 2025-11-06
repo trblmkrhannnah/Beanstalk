@@ -1,11 +1,15 @@
 @inherits LayoutComponentBase
 
 <div class="page">
+    <PageTitle>Beanstalk 🌱</PageTitle>
     <main>
         <article class="content px-4">
-            <PageTitle>Beanstalk</PageTitle>
-            <h1 class="display-4">Beanstalk</h1>
-            @Body
+            <div class="container py-5 col-md-8 col-lg-6">
+                <h1 class="display-4 text-center">Beanstalk 🌱</h1>
+            </div>
+            <div class="container py-5 col-md-8 col-lg-6">
+                @Body
+            </div>
         </article>
     </main>
 </div>
@@ -16,4 +20,4 @@
     <span class="dismiss">🗙</span>
 </div>
 
-<AntiforgeryToken />
+<AntiforgeryToken/>

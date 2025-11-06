@@ -3,17 +3,17 @@
 
 @inject BeanstalkNavigator Navigator
 
-<div class="container py-5">
-    <p class="lead">Link your life!.</p>
-    <p>
-        <a class="btn btn-primary" href="/home/register">Get Started</a>
-        <a class="btn btn-outline-secondary ms-2" href="/home/login">Log in</a>
-    </p>
-</div>
+<p class="lead">Link your life!.</p>
+<p>
+    <a class="btn btn-primary" href="/home/register">Get Started</a>
+    <a class="btn btn-outline-secondary ms-2" href="/home/login">Log in</a>
+</p>
 
 @code {
+
     protected override async Task OnInitializedAsync()
     {
         await Navigator.NavigateToEditIfLoggedInAsync();
     }
+
 }

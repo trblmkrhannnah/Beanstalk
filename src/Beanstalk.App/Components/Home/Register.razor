@@ -21,6 +21,12 @@ else
     <EditForm Model="Model" OnValidSubmit="RegisterAsync" FormName="register" method="post">
         <DataAnnotationsValidator />
         <ValidationSummary />
+        @if (!string.IsNullOrEmpty(_validationMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_validationMessage
+            </div>
+        }
         <div class="mb-3">
             <label for="reg-username">Username</label>
             <InputText id="reg-username" class="form-control" @bind-Value="Model.Username" />
@@ -28,6 +34,10 @@ else
         <div class="mb-3">
             <label for="reg-password">Password</label>
             <InputText id="reg-password" class="form-control" @bind-Value="Model.Password" type="password" />
+        </div>
+        <div class="mb-3">
+            <label for="reg-confirm-password">Confirm Password</label>
+            <InputText id="reg-confirm-password" class="form-control" @bind-Value="Model.ConfirmPassword" type="password" />
         </div>
         <button class="btn btn-primary" type="submit">Register</button>
     </EditForm>
@@ -47,8 +57,9 @@ else
 
     private async Task RegisterAsync()
     {
+        _validationMessage = null;
         var username = Model.Username?.Trim() ?? string.Empty;
-        if (username.Length < 6)
+        if (username.Length < 5)
         {
             _validationMessage = "Username must be at least 5 characters.";
             return;
@@ -114,6 +125,10 @@ else
         [Required]
         [MinLength(6)]
         public string Password { get; set; } = string.Empty;
+
+        [Required]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
 
