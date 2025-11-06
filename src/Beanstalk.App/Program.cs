@@ -5,6 +5,7 @@ using Beanstalk.App.Features;
 using Beanstalk.App.Features.ProfileDisplay;
 using Beanstalk.Database.Data;
 using Beanstalk.Database.Entities;
+using Beanstalk.Database.Seeding;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -93,136 +94,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
 
-    // Seed theme palettes if none exist
-    if (!db.ThemePalettes.Any())
-    {
-        var palettes = new[]
-        {
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Ocean Breeze",
-                IsDefault = true,
-                BackgroundGradient1 = "#667eea",
-                BackgroundGradient2 = "#764ba2",
-                TitleColor = "#ffffff",
-                ContentColor = "#f0f0f0",
-                ContainerBackground = "#ffffff",
-                ContainerForeground = "#667eea"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Sunset Glow",
-                IsDefault = false,
-                BackgroundGradient1 = "#ff6b6b",
-                BackgroundGradient2 = "#feca57",
-                TitleColor = "#ffffff",
-                ContentColor = "#ffffff",
-                ContainerBackground = "#ffffff",
-                ContainerForeground = "#ff6b6b"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Forest Deep",
-                IsDefault = false,
-                BackgroundGradient1 = "#0f4c3a",
-                BackgroundGradient2 = "#1e8467",
-                TitleColor = "#ffffff",
-                ContentColor = "#e0e0e0",
-                ContainerBackground = "#ffffff",
-                ContainerForeground = "#0f4c3a"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Midnight Sky",
-                IsDefault = false,
-                BackgroundGradient1 = "#1a1a2e",
-                BackgroundGradient2 = "#16213e",
-                TitleColor = "#eee",
-                ContentColor = "#ddd",
-                ContainerBackground = "#0f3460",
-                ContainerForeground = "#e94560"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Cherry Blossom",
-                IsDefault = false,
-                BackgroundGradient1 = "#ff9a9e",
-                BackgroundGradient2 = "#fecfef",
-                TitleColor = "#5a1f47",
-                ContentColor = "#7a3f67",
-                ContainerBackground = "#5a1f47",
-                ContainerForeground = "#ffffff"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Arctic Ice",
-                IsDefault = false,
-                BackgroundGradient1 = "#a8edea",
-                BackgroundGradient2 = "#fed6e3",
-                TitleColor = "#2c3e50",
-                ContentColor = "#34495e",
-                ContainerBackground = "#2c3e50",
-                ContainerForeground = "#ffffff"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Desert Sand",
-                IsDefault = false,
-                BackgroundGradient1 = "#d4a574",
-                BackgroundGradient2 = "#f4e4d7",
-                TitleColor = "#3e2723",
-                ContentColor = "#5d4037",
-                ContainerBackground = "#6d4c41",
-                ContainerForeground = "#ffffff"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Neon Nights",
-                IsDefault = false,
-                BackgroundGradient1 = "#7f00ff",
-                BackgroundGradient2 = "#e100ff",
-                TitleColor = "#ffffff",
-                ContentColor = "#f0f0f0",
-                ContainerBackground = "#00ff88",
-                ContainerForeground = "#000000"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Autumn Harvest",
-                IsDefault = false,
-                BackgroundGradient1 = "#c94b4b",
-                BackgroundGradient2 = "#f4a261",
-                TitleColor = "#ffffff",
-                ContentColor = "#fefae0",
-                ContainerBackground = "#2a9d8f",
-                ContainerForeground = "#ffffff"
-            },
-            new ThemePalette
-            {
-                Id = Guid.NewGuid(),
-                Name = "Monochrome",
-                IsDefault = false,
-                BackgroundGradient1 = "#2c2c2c",
-                BackgroundGradient2 = "#1a1a1a",
-                TitleColor = "#ffffff",
-                ContentColor = "#cccccc",
-                ContainerBackground = "#ffffff",
-                ContainerForeground = "#000000"
-            }
-        };
-
-        db.ThemePalettes.AddRange(palettes);
-        db.SaveChanges();
-    }
+    // Seed data if required.
+    new ThemePaletteSeeder().SeedIfRequired(db);
 }
 
 // Development-only: log POST form keys to simplify form-name debugging
