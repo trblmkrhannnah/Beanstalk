@@ -1,4 +1,7 @@
 ﻿@page "/"
+@using Beanstalk.App.Features
+
+@inject BeanstalkNavigator Navigator
 
 <div class="container py-5">
     <p class="lead">Link your life!.</p>
@@ -7,3 +10,10 @@
         <a class="btn btn-outline-secondary ms-2" href="/home/login">Log in</a>
     </p>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Navigator.NavigateToEditIfLoggedInAsync();
+    }
+}

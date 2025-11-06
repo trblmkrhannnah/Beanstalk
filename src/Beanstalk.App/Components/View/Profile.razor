@@ -1,7 +1,8 @@
 @page "/{Username:regex(^[a-zA-Z0-9_-]{{5,}}$)}"
+@using Beanstalk.App.Features
 
 @inject ProfileDisplayModelFactory ProfileFactory
-@inject Navigator Navigator
+@inject BeanstalkNavigator Navigator
 
 @if (Instance is not null)
 {

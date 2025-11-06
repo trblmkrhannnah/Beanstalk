@@ -1,8 +1,7 @@
 using System;
-using System.IO;
 using System.Linq;
 using Beanstalk.App.Components;
-using Beanstalk.App.Features.Navigator;
+using Beanstalk.App.Features;
 using Beanstalk.App.Features.ProfileDisplay;
 using Beanstalk.Database.Data;
 using Beanstalk.Database.Entities;
@@ -27,6 +26,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 });
 
 // Add services to the container.
+builder.Services.AddControllers();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -40,6 +40,7 @@ builder.Services.Configure<FormOptions>(options =>
 
 // Antiforgery configuration (allow HTTP for local dev)
 const string AntiCookieName = "Beanstalk.Antiforgery";
+
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.Name = AntiCookieName;
@@ -78,7 +79,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddTransient<ProfileDisplayModelFactory>();
-builder.Services.AddScoped<Navigator>();
+builder.Services.AddScoped<BeanstalkNavigator>();
+builder.Services.AddScoped<BeanstalkConfig>();
 
 var app = builder.Build();
 
@@ -247,124 +249,11 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapControllers();
 var razorComponents = app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-if (app.Environment.IsDevelopment()) razorComponents.WithMetadata(new IgnoreAntiforgeryTokenAttribute());
-
-// Profile Images API Endpoints
-
-// GET /api/profile-images/{id} - Serve image from database
-app.MapGet("/api/profile-images/{id:guid}", async (Guid id, ApplicationDbContext db) =>
-{
-    var image = await db.ProfileImages.FindAsync(id);
-    if (image == null) return Results.NotFound();
-
-    return Results.File(image.ImageData, image.ContentType);
-});
-
-// POST /api/profile-images/upload - Upload cropped image
-app.MapPost("/api/profile-images/upload", async (HttpContext http, ApplicationDbContext db, UserManager<ApplicationUser> userManager) =>
-{
-    if (!http.User.Identity?.IsAuthenticated ?? true) return Results.Unauthorized();
-
-    var user = await userManager.GetUserAsync(http.User);
-    if (user == null) return Results.Unauthorized();
-
-    var profile = await db.UserProfiles
-        .Include(p => p.Images)
-        .FirstOrDefaultAsync(p => p.UserId == user.Id);
-
-    if (profile == null)
-    {
-        profile = new UserProfile { Id = Guid.NewGuid(), UserId = user.Id, CreatedUtc = DateTime.UtcNow };
-        db.UserProfiles.Add(profile);
-        await db.SaveChangesAsync();
-    }
-
-    // Check max images limit
-    var maxImagesSetting = await db.AppSettings.FindAsync("MaxImagesPerUser");
-    var maxImages = 10;
-    if (maxImagesSetting != null && int.TryParse(maxImagesSetting.Value, out var parsedMax)) maxImages = parsedMax;
-
-    if (profile.Images.Count >= maxImages) return Results.BadRequest(new { error = $"Maximum of {maxImages} images allowed." });
-
-    if (!http.Request.HasFormContentType || http.Request.Form.Files.Count == 0) return Results.BadRequest(new { error = "No file uploaded." });
-
-    var file = http.Request.Form.Files[0];
-    if (file.Length == 0) return Results.BadRequest(new { error = "Empty file." });
-
-    if (file.Length > 10 * 1024 * 1024) return Results.BadRequest(new { error = "File too large. Maximum 10MB allowed." });
-
-    var contentType = file.ContentType?.ToLowerInvariant() ?? string.Empty;
-    if (contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/webp") return Results.BadRequest(new { error = "Unsupported image type. Use JPEG, PNG, or WebP." });
-
-    // Read image data
-    await using var memoryStream = new MemoryStream();
-    await file.CopyToAsync(memoryStream);
-    var imageData = memoryStream.ToArray();
-
-    var imageId = Guid.NewGuid();
-    var stored = new ProfileImage
-    {
-        Id = imageId,
-        ProfileId = profile.Id,
-        ImageData = imageData,
-        ContentType = contentType,
-        CreatedUtc = DateTime.UtcNow
-    };
-
-    db.ProfileImages.Add(stored);
-
-    // Set as default if no default image exists
-    if (!profile.SelectedImageId.HasValue) profile.SelectedImageId = stored.Id;
-
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { id = stored.Id, url = $"/api/profile-images/{stored.Id}" });
-});
-
-// DELETE /api/profile-images/{id} - Delete image
-app.MapDelete("/api/profile-images/{id:guid}", async (Guid id, HttpContext http, ApplicationDbContext db, UserManager<ApplicationUser> userManager) =>
-{
-    if (!http.User.Identity?.IsAuthenticated ?? true) return Results.Unauthorized();
-
-    var user = await userManager.GetUserAsync(http.User);
-    if (user == null) return Results.Unauthorized();
-
-    var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
-    if (profile == null) return Results.NotFound();
-
-    var image = await db.ProfileImages.FindAsync(id);
-    if (image == null || image.ProfileId != profile.Id) return Results.NotFound();
-
-    // If this is the selected image, unset it
-    if (profile.SelectedImageId == id) profile.SelectedImageId = null;
-
-    db.ProfileImages.Remove(image);
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { success = true });
-});
-
-// POST /api/profile-images/{id}/set-default - Set as default profile image
-app.MapPost("/api/profile-images/{id:guid}/set-default", async (Guid id, HttpContext http, ApplicationDbContext db, UserManager<ApplicationUser> userManager) =>
-{
-    if (!http.User.Identity?.IsAuthenticated ?? true) return Results.Unauthorized();
-
-    var user = await userManager.GetUserAsync(http.User);
-    if (user == null) return Results.Unauthorized();
-
-    var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
-    if (profile == null) return Results.NotFound();
-
-    var image = await db.ProfileImages.FindAsync(id);
-    if (image == null || image.ProfileId != profile.Id) return Results.NotFound();
-
-    profile.SelectedImageId = id;
-    await db.SaveChangesAsync();
-
-    return Results.Ok(new { success = true });
-});
+if (app.Environment.IsDevelopment())
+    razorComponents.WithMetadata(new IgnoreAntiforgeryTokenAttribute());
 
 app.Run();
