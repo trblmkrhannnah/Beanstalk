@@ -21,5 +21,9 @@ public class InviteLink
     public bool IsActive { get; set; } = true;
     
     public DateTime? ExpiresUtc { get; set; }
+    
+    public string? Comment { get; set; }
+    
+    public bool AutoDeleteWhenExpired { get; set; }
 }
 

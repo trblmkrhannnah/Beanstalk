@@ -89,6 +89,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.Property(i => i.CreatedUtc).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(i => i.CurrentUses).HasDefaultValue(0);
             entity.Property(i => i.IsActive).HasDefaultValue(true);
+            entity.Property(i => i.AutoDeleteWhenExpired).HasDefaultValue(false);
 
             entity.HasOne(i => i.CreatedBy)
                 .WithMany()

@@ -40,6 +40,18 @@
                             </select>
                         </div>
                         <div class="mb-3">
+                            <label for="comment" class="form-label">Comment (optional)</label>
+                            <input type="text" id="comment" class="form-control" @bind="_newInviteComment" placeholder="e.g., For John Doe" />
+                            <small class="text-muted">Add a note to help remember what this invite is for</small>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="autoDelete" @bind="_newInviteAutoDelete" />
+                            <label class="form-check-label" for="autoDelete">
+                                Auto-delete when expired
+                            </label>
+                            <small class="text-muted d-block">Automatically remove this link when it expires or reaches max uses</small>
+                        </div>
+                        <div class="mb-3">
                             <button class="btn btn-success" @onclick="CreateInviteAsync">Create</button>
                             <button class="btn btn-secondary ms-2" @onclick="HideCreateForm">Cancel</button>
                         </div>
@@ -63,6 +75,8 @@
                             <th>Link</th>
                             <th>Uses</th>
                             <th>Status</th>
+                            <th>Auto-Delete</th>
+                            <th>Comment</th>
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
@@ -90,6 +104,25 @@
                                 <td>@usesText</td>
                                 <td>
                                     <span class="@statusClass fw-bold">@statusText</span>
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               role="switch"
+                                               checked="@invite.AutoDeleteWhenExpired"
+                                               @onchange="@(e => ToggleAutoDeleteAsync(invite))" />
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(invite.Comment))
+                                    {
+                                        <small class="text-muted">@invite.Comment</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">—</small>
+                                    }
                                 </td>
                                 <td>@invite.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                 <td>
@@ -131,6 +164,8 @@
     private bool _messageIsError;
     private bool _showCreateForm = false;
     private string? _newInviteMaxUses = "10";
+    private string? _newInviteComment = "";
+    private bool _newInviteAutoDelete = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,6 +175,21 @@
     private async Task LoadInvitesAsync()
     {
         _loading = true;
+        
+        // Auto-delete expired invites that have auto-delete enabled
+        var expiredAutoDeleteInvites = await Db.InviteLinks
+            .Where(i => i.AutoDeleteWhenExpired && 
+                       (!i.IsActive || 
+                        (i.MaxUses.HasValue && i.CurrentUses >= i.MaxUses.Value) ||
+                        (i.ExpiresUtc.HasValue && i.ExpiresUtc.Value < DateTime.UtcNow)))
+            .ToListAsync();
+        
+        if (expiredAutoDeleteInvites.Any())
+        {
+            Db.InviteLinks.RemoveRange(expiredAutoDeleteInvites);
+            await Db.SaveChangesAsync();
+        }
+        
         _invites = await Db.InviteLinks
             .Include(i => i.CreatedBy)
             .OrderByDescending(i => i.CreatedUtc)
@@ -157,6 +207,8 @@
     {
         _showCreateForm = false;
         _newInviteMaxUses = "10";
+        _newInviteComment = "";
+        _newInviteAutoDelete = false;
     }
 
     private async Task CreateInviteAsync()
@@ -192,7 +244,9 @@
             CreatedUtc = DateTime.UtcNow,
             MaxUses = maxUses,
             CurrentUses = 0,
-            IsActive = true
+            IsActive = true,
+            Comment = string.IsNullOrWhiteSpace(_newInviteComment) ? null : _newInviteComment.Trim(),
+            AutoDeleteWhenExpired = _newInviteAutoDelete
         };
 
         Db.InviteLinks.Add(invite);
@@ -202,6 +256,8 @@
         _messageIsError = false;
         _showCreateForm = false;
         _newInviteMaxUses = "10";
+        _newInviteComment = "";
+        _newInviteAutoDelete = false;
         
         await LoadInvitesAsync();
     }
@@ -212,6 +268,15 @@
         await Db.SaveChangesAsync();
         
         _message = $"Invite link {(invite.IsActive ? "activated" : "deactivated")}.";
+        _messageIsError = false;
+    }
+
+    private async Task ToggleAutoDeleteAsync(InviteLink invite)
+    {
+        invite.AutoDeleteWhenExpired = !invite.AutoDeleteWhenExpired;
+        await Db.SaveChangesAsync();
+        
+        _message = $"Auto-delete {(invite.AutoDeleteWhenExpired ? "enabled" : "disabled")} for invite link.";
         _messageIsError = false;
     }
 
