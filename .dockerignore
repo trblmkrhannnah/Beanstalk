@@ -1,0 +1,12 @@
+db-data/
+.git/
+.gitignore
+*.md
+LICENSE
+docker-compose*.yml
+.vs/
+.vscode/
+bin/
+obj/
+*.user
+

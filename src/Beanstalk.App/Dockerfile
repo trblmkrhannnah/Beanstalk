@@ -1,8 +1,8 @@
 # build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /src
+WORKDIR /build
 
-COPY ./ ../
+COPY ./ ./
 RUN dotnet restore src/Beanstalk.sln \
  && dotnet publish src/Beanstalk.App/Beanstalk.App.csproj -c Release -o /app/publish
 
