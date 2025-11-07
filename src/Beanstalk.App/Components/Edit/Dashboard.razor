@@ -1,6 +1,7 @@
 @page "/edit/"
 @page "/edit/dashboard"
 
+@using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 @inject ApplicationDbContext Db
@@ -44,7 +45,7 @@
         }
     </Authorized>
     <NotAuthorized>
-        <p>Please <a href="/config/login">log in</a>.</p>
+        <PleaseLogIn />
     </NotAuthorized>
 </AuthorizeView>
 

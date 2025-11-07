@@ -1,6 +1,7 @@
 @page "/edit/appearance"
 @rendermode InteractiveServer
 
+@using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 @using Microsoft.EntityFrameworkCore
@@ -66,7 +67,7 @@
             }
         </Authorized>
         <NotAuthorized>
-            <p>Please <a href="/config/login">log in</a>.</p>
+            <PleaseLogIn />
         </NotAuthorized>
     </AuthorizeView>
 </CascadingAuthenticationState>

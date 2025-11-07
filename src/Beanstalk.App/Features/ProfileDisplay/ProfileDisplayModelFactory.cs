@@ -17,7 +17,7 @@ public sealed class ProfileDisplayModelFactory
 
     public async Task<ProfileDisplayModel?> TryGetProfile(string username, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username, cancellationToken: cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName!.ToLower() == username.ToLower(), cancellationToken: cancellationToken);
 
         if (user is not { IsEnabled: true })
             return null;

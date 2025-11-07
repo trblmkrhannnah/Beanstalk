@@ -1,0 +1,40 @@
+@page "/edit/preview"
+@rendermode InteractiveServer
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.App.Components.View
+@using Beanstalk.Database.Entities
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_username is not null)
+            {
+                <Profile Username="@_username"/>
+            }
+            else
+            {
+                <p>Loading</p>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <PleaseLogIn/>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private string? _username = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(state.User);
+
+        if (user != null)
+            _username = user.NormalizedUserName;
+    }
+}
