@@ -10,6 +10,12 @@
 <EditForm Model="Model" OnValidSubmit="LoginAsync" FormName="login" method="post">
     <DataAnnotationsValidator />
     <ValidationSummary />
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert alert-danger" role="alert">
+            @_error
+        </div>
+    }
     <div class="mb-3">
         <label for="login-username">Username</label>
         <InputText id="login-username" class="form-control" @bind-Value="Model.Username" />
@@ -31,6 +37,15 @@
         if (result.Succeeded)
         {
             Nav.NavigateTo("/edit/dashboard", true);
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            // Store username in session or pass as parameter
+            Nav.NavigateTo($"/home/login-2fa?returnUrl={Uri.EscapeDataString("/edit/dashboard")}", true);
+        }
+        else if (result.IsLockedOut)
+        {
+            _error = "Account is locked out. Please try again later.";
         }
         else
         {

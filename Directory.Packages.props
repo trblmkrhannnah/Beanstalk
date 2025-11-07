@@ -15,5 +15,8 @@
 
     <!-- Imaging -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.0" />
+
+    <!-- QR Code Generation -->
+    <PackageVersion Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 </Project>

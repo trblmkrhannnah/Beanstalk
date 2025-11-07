@@ -68,7 +68,8 @@ builder.Services
     })
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddSignInManager();
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -76,7 +77,12 @@ builder.Services.AddAuthentication(options =>
         options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
         options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
     })
-    .AddCookie(IdentityConstants.ApplicationScheme, options => { options.LoginPath = "/site/login"; });
+    .AddCookie(IdentityConstants.ApplicationScheme, options => { options.LoginPath = "/site/login"; })
+    .AddCookie(IdentityConstants.TwoFactorUserIdScheme, options =>
+    {
+        options.Cookie.Name = IdentityConstants.TwoFactorUserIdScheme;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+    });
 
 builder.Services.AddAuthorization();
 

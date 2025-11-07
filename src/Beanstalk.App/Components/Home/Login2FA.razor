@@ -1,0 +1,149 @@
+@page "/home/login-2fa"
+
+@using System.ComponentModel.DataAnnotations
+@using Beanstalk.Database.Entities
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Nav
+
+<h3>Two-Factor Authentication</h3>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger" role="alert">
+        @_error
+    </div>
+}
+
+@if (!UseRecoveryCode)
+{
+    <p>Enter the verification code from your authenticator app.</p>
+    
+    <EditForm Model="Model" OnValidSubmit="VerifyCodeAsync" FormName="verify2fa" method="post">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        
+        <div class="mb-3">
+            <label for="code">Authentication Code</label>
+            <InputText id="code" class="form-control" @bind-Value="Model.Code" placeholder="000000" maxlength="6" />
+            <small class="form-text text-muted">Enter the 6-digit code from your authenticator app.</small>
+        </div>
+        
+        <div class="form-check mb-3">
+            <InputCheckbox id="remember-device" class="form-check-input" @bind-Value="Model.RememberDevice" />
+            <label class="form-check-label" for="remember-device">
+                Remember this device for 30 days
+            </label>
+        </div>
+        
+        <button class="btn btn-primary" type="submit">Verify</button>
+        <a href="/home/login-2fa?useRecovery=true@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"&returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn btn-link">Use a recovery code instead</a>
+    </EditForm>
+}
+else
+{
+    <p>Enter one of your recovery codes.</p>
+    
+    <EditForm Model="RecoveryModel" OnValidSubmit="VerifyRecoveryCodeAsync" FormName="verifyRecovery" method="post">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        
+        <div class="mb-3">
+            <label for="recovery-code">Recovery Code</label>
+            <InputText id="recovery-code" class="form-control" @bind-Value="RecoveryModel.RecoveryCode" />
+            <small class="form-text text-muted">Recovery codes are case-sensitive and can only be used once.</small>
+        </div>
+        
+        <button class="btn btn-primary" type="submit">Verify</button>
+        <a href="/home/login-2fa@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn btn-link">Use authenticator code instead</a>
+    </EditForm>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "useRecovery")]
+    public bool UseRecoveryCode { get; set; }
+    
+    [SupplyParameterFromForm]
+    private TwoFactorModel Model { get; set; } = new();
+    
+    [SupplyParameterFromForm]
+    private RecoveryCodeModel RecoveryModel { get; set; } = new();
+    
+    private string? _error;
+
+    private async Task VerifyCodeAsync()
+    {
+        _error = null;
+        
+        // Remove any spaces or dashes from the code
+        var code = Model.Code?.Replace(" ", "").Replace("-", "") ?? "";
+        
+        if (string.IsNullOrEmpty(code) || code.Length != 6)
+        {
+            _error = "Please enter a valid 6-digit code.";
+            return;
+        }
+        
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(code, Model.RememberDevice, rememberClient: Model.RememberDevice);
+        
+        if (result.Succeeded)
+        {
+            var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/edit/dashboard" : ReturnUrl;
+            Nav.NavigateTo(returnUrl, true);
+        }
+        else if (result.IsLockedOut)
+        {
+            _error = "Account is locked out. Please try again later.";
+        }
+        else
+        {
+            _error = "Invalid authentication code. Please try again.";
+        }
+    }
+    
+    private async Task VerifyRecoveryCodeAsync()
+    {
+        _error = null;
+        
+        var code = RecoveryModel.RecoveryCode?.Trim() ?? "";
+        
+        if (string.IsNullOrEmpty(code))
+        {
+            _error = "Please enter a recovery code.";
+            return;
+        }
+        
+        var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(code);
+        
+        if (result.Succeeded)
+        {
+            var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/edit/dashboard" : ReturnUrl;
+            Nav.NavigateTo(returnUrl, true);
+        }
+        else if (result.IsLockedOut)
+        {
+            _error = "Account is locked out. Please try again later.";
+        }
+        else
+        {
+            _error = "Invalid recovery code. Please check and try again.";
+        }
+    }
+    
+    private class TwoFactorModel
+    {
+        [Required(ErrorMessage = "Authentication code is required")]
+        public string Code { get; set; } = string.Empty;
+        
+        public bool RememberDevice { get; set; }
+    }
+    
+    private class RecoveryCodeModel
+    {
+        [Required(ErrorMessage = "Recovery code is required")]
+        public string RecoveryCode { get; set; } = string.Empty;
+    }
+}
+

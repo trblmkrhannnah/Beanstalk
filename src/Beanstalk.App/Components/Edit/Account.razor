@@ -2,14 +2,18 @@
 @rendermode InteractiveServer
 
 @using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
 @using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
+@using QRCoder
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 
 <CascadingAuthenticationState>
 <AuthorizeView Context="auth">
@@ -58,6 +62,178 @@
                         </div>
                         <button class="btn btn-primary" type="submit">Change Password</button>
                     </EditForm>
+                </div>
+            </div>
+
+            
+            <!-- Two-Factor Authentication Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Two-Factor Authentication</h5>
+                    
+                    @if (_twoFactorLoading)
+                    {
+                        <p>Loading...</p>
+                    }
+                    else if (!_twoFactorEnabled)
+                    {
+                        @if (_setupStep == TwoFactorSetupStep.NotStarted)
+                        {
+                            <p class="card-text">Add an extra layer of security to your account by enabling two-factor authentication (2FA). You'll need an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy.</p>
+                            <button class="btn btn-primary" type="button" @onclick="StartTwoFactorSetup">Enable Two-Factor Authentication</button>
+                        }
+                        else if (_setupStep == TwoFactorSetupStep.ShowingQrCode)
+                        {
+                            <div class="alert alert-info">
+                                <strong>Step 1 of 2:</strong> Scan the QR code or enter the key manually
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(_qrCodeImageUrl))
+                            {
+                                <div class="text-center mb-3">
+                                    <img src="@_qrCodeImageUrl" alt="QR Code" style="max-width: 300px;" />
+                                </div>
+                            }
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Manual Entry Key</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" value="@_authenticatorKey" readonly />
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="CopyKeyToClipboard">Copy</button>
+                                </div>
+                                <small class="form-text text-muted">Enter this key into your authenticator app if you can't scan the QR code.</small>
+                            </div>
+                            
+                            <EditForm Model="VerifySetupModel" OnValidSubmit="VerifyTwoFactorSetup">
+                                <DataAnnotationsValidator/>
+                                <ValidationSummary/>
+                                
+                                @if (!string.IsNullOrEmpty(_setupError))
+                                {
+                                    <div class="alert alert-danger">@_setupError</div>
+                                }
+                                
+                                <div class="mb-3">
+                                    <label for="verify-code" class="form-label">Verification Code</label>
+                                    <InputText id="verify-code" class="form-control" @bind-Value="VerifySetupModel.Code" placeholder="000000" maxlength="6"/>
+                                    <small class="form-text text-muted">Enter the 6-digit code from your authenticator app to verify.</small>
+                                </div>
+                                
+                                <button class="btn btn-primary me-2" type="submit">Verify & Continue</button>
+                                <button class="btn btn-secondary" type="button" @onclick="CancelTwoFactorSetup">Cancel</button>
+                            </EditForm>
+                        }
+                        else if (_setupStep == TwoFactorSetupStep.ShowingRecoveryCodes)
+                        {
+                            <div class="alert alert-warning">
+                                <strong>Step 2 of 2:</strong> Save your recovery codes
+                            </div>
+                            
+                            <div class="alert alert-danger">
+                                <strong>Important:</strong> Save these recovery codes in a safe place. Each code can only be used once. If you lose access to your authenticator device, you'll need these codes to log in.
+                            </div>
+                            
+                            @if (_recoveryCodes != null && _recoveryCodes.Any())
+                            {
+                                <div class="mb-3">
+                                    <div class="border rounded p-3 bg-light font-monospace" style="column-count: 2; column-gap: 20px;">
+                                        @foreach (var recoveryCode in _recoveryCodes)
+                                        {
+                                            <div class="mb-1">@recoveryCode</div>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-outline-primary me-2" type="button" @onclick="CopyRecoveryCodesToClipboard">Copy All Codes</button>
+                                <button class="btn btn-outline-primary me-2" type="button" @onclick="DownloadRecoveryCodes">Download Codes</button>
+                            }
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirm-saved" @bind="_confirmSavedCodes" />
+                                <label class="form-check-label" for="confirm-saved">
+                                    I have saved my recovery codes in a safe place
+                                </label>
+                            </div>
+                            
+                            <button class="btn btn-success" type="button" @onclick="FinishTwoFactorSetup" disabled="@(!_confirmSavedCodes)">
+                                Finish Setup
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-success">
+                            <strong>Two-factor authentication is enabled</strong> - Your account is protected with an additional security layer.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button class="btn btn-primary me-2" type="button" @onclick="ShowRegenerateRecoveryCodes">Regenerate Recovery Codes</button>
+                            <button class="btn btn-danger" type="button" @onclick="ShowDisableTwoFactor">Disable Two-Factor Authentication</button>
+                        </div>
+                        
+                        @if (_showRegenerateCodes)
+                        {
+                            <div class="card border-warning mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Regenerate Recovery Codes</h6>
+                                    <p class="card-text">This will generate new recovery codes and invalidate your old ones. Make sure to save the new codes.</p>
+                                    
+                                    @if (_regeneratedCodes != null && _regeneratedCodes.Any())
+                                    {
+                                        <div class="alert alert-warning">
+                                            <strong>Your new recovery codes:</strong>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <div class="border rounded p-3 bg-light font-monospace" style="column-count: 2; column-gap: 20px;">
+                                                @foreach (var recoveryCode in _regeneratedCodes)
+                                                {
+                                                    <div class="mb-1">@recoveryCode</div>
+                                                }
+                                            </div>
+                                        </div>
+                                        
+                                        <button class="btn btn-outline-primary me-2" type="button" @onclick="CopyRegeneratedCodesToClipboard">Copy All Codes</button>
+                                        <button class="btn btn-outline-primary me-2" type="button" @onclick="DownloadRegeneratedCodes">Download Codes</button>
+                                        <button class="btn btn-secondary" type="button" @onclick="CloseRegenerateCodes">Close</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-warning me-2" type="button" @onclick="RegenerateRecoveryCodes">Generate New Codes</button>
+                                        <button class="btn btn-secondary" type="button" @onclick="CloseRegenerateCodes">Cancel</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (_showDisable2FA)
+                        {
+                            <div class="card border-danger mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title text-danger">Disable Two-Factor Authentication</h6>
+                                    <p class="card-text">This will remove the additional security layer from your account.</p>
+                                    
+                                    <EditForm Model="DisableModel" OnValidSubmit="DisableTwoFactorAsync">
+                                        <DataAnnotationsValidator/>
+                                        <ValidationSummary/>
+                                        
+                                        @if (!string.IsNullOrEmpty(_disable2FAError))
+                                        {
+                                            <div class="alert alert-danger">@_disable2FAError</div>
+                                        }
+                                        
+                                        <div class="mb-3">
+                                            <label for="disable-password" class="form-label">Enter your password to confirm</label>
+                                            <InputText id="disable-password" type="password" class="form-control" @bind-Value="DisableModel.Password"/>
+                                        </div>
+                                        
+                                        <button class="btn btn-danger me-2" type="submit">Yes, Disable 2FA</button>
+                                        <button class="btn btn-secondary" type="button" @onclick="CancelDisable2FA">Cancel</button>
+                                    </EditForm>
+                                </div>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
             
@@ -131,6 +307,8 @@
         
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = await UserManager.GetUserAsync(state.User);
+
+        await LoadTwoFactorStatusAsync();
 
         _loading = false;
     }
@@ -269,6 +447,264 @@
     private class DeleteAccountModel
     {
         [Required(ErrorMessage = "Password is required to delete account")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    // Two-Factor Authentication
+    private bool _twoFactorEnabled;
+    private bool _twoFactorLoading;
+    private TwoFactorSetupStep _setupStep = TwoFactorSetupStep.NotStarted;
+    private string? _authenticatorKey;
+    private string? _qrCodeImageUrl;
+    private IEnumerable<string>? _recoveryCodes;
+    private IEnumerable<string>? _regeneratedCodes;
+    private bool _confirmSavedCodes;
+    private string? _setupError;
+    private bool _showRegenerateCodes;
+    private bool _showDisable2FA;
+    private string? _disable2FAError;
+    
+    private VerifyCodeModel VerifySetupModel { get; set; } = new();
+    private DisableTwoFactorModel DisableModel { get; set; } = new();
+
+    private async Task LoadTwoFactorStatusAsync()
+    {
+        _twoFactorLoading = true;
+        if (_user != null)
+        {
+            _twoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(_user);
+        }
+        _twoFactorLoading = false;
+    }
+
+    private async Task StartTwoFactorSetup()
+    {
+        if (_user == null) return;
+
+        // Reset the authenticator key
+        await UserManager.ResetAuthenticatorKeyAsync(_user);
+        _authenticatorKey = await UserManager.GetAuthenticatorKeyAsync(_user);
+
+        if (string.IsNullOrEmpty(_authenticatorKey))
+        {
+            _setupError = "Failed to generate authenticator key. Please try again.";
+            return;
+        }
+
+        // Generate QR code
+        var appName = "Beanstalk";
+        var authenticatorUri = GenerateQrCodeUri(_authenticatorKey, _user.UserName ?? "user", appName);
+        _qrCodeImageUrl = GenerateQrCodeImage(authenticatorUri);
+
+        _setupStep = TwoFactorSetupStep.ShowingQrCode;
+        _setupError = null;
+        StateHasChanged();
+    }
+
+    private string GenerateQrCodeUri(string key, string username, string issuer)
+    {
+        return $"otpauth://totp/{UrlEncoder.Default.Encode(issuer)}:{UrlEncoder.Default.Encode(username)}?secret={key}&issuer={UrlEncoder.Default.Encode(issuer)}&digits=6";
+    }
+
+    private string GenerateQrCodeImage(string data)
+    {
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(data, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrCodeData);
+        var qrCodeBytes = qrCode.GetGraphic(20);
+        return $"data:image/png;base64,{Convert.ToBase64String(qrCodeBytes)}";
+    }
+
+    private async Task CopyKeyToClipboard()
+    {
+        if (!string.IsNullOrEmpty(_authenticatorKey))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _authenticatorKey);
+        }
+    }
+
+    private async Task VerifyTwoFactorSetup()
+    {
+        if (_user == null)
+        {
+            _setupError = "User not found.";
+            return;
+        }
+
+        var code = VerifySetupModel.Code?.Replace(" ", "").Replace("-", "") ?? "";
+        
+        if (string.IsNullOrEmpty(code) || code.Length != 6)
+        {
+            _setupError = "Please enter a valid 6-digit code.";
+            return;
+        }
+
+        // Verify the code
+        var isValid = await UserManager.VerifyTwoFactorTokenAsync(_user, UserManager.Options.Tokens.AuthenticatorTokenProvider, code);
+
+        if (!isValid)
+        {
+            _setupError = "Invalid verification code. Please check your authenticator app and try again.";
+            return;
+        }
+
+        // Enable 2FA
+        await UserManager.SetTwoFactorEnabledAsync(_user, true);
+
+        // Generate recovery codes
+        _recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10);
+
+        _setupStep = TwoFactorSetupStep.ShowingRecoveryCodes;
+        _setupError = null;
+        _confirmSavedCodes = false;
+        VerifySetupModel = new();
+        StateHasChanged();
+    }
+
+    private async Task CopyRecoveryCodesToClipboard()
+    {
+        if (_recoveryCodes != null)
+        {
+            var codesText = string.Join("\n", _recoveryCodes);
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", codesText);
+        }
+    }
+
+    private async Task DownloadRecoveryCodes()
+    {
+        if (_recoveryCodes != null)
+        {
+            var codesText = string.Join("\n", _recoveryCodes);
+            var fileName = $"beanstalk-recovery-codes-{DateTime.UtcNow:yyyyMMdd}.txt";
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", fileName, codesText);
+        }
+    }
+
+    private void FinishTwoFactorSetup()
+    {
+        if (!_confirmSavedCodes)
+        {
+            return;
+        }
+
+        _twoFactorEnabled = true;
+        _setupStep = TwoFactorSetupStep.NotStarted;
+        _recoveryCodes = null;
+        _authenticatorKey = null;
+        _qrCodeImageUrl = null;
+        StateHasChanged();
+    }
+
+    private void CancelTwoFactorSetup()
+    {
+        _setupStep = TwoFactorSetupStep.NotStarted;
+        _setupError = null;
+        _authenticatorKey = null;
+        _qrCodeImageUrl = null;
+        _recoveryCodes = null;
+        VerifySetupModel = new();
+        StateHasChanged();
+    }
+
+    private void ShowRegenerateRecoveryCodes()
+    {
+        _showRegenerateCodes = true;
+        _regeneratedCodes = null;
+        StateHasChanged();
+    }
+
+    private void CloseRegenerateCodes()
+    {
+        _showRegenerateCodes = false;
+        _regeneratedCodes = null;
+        StateHasChanged();
+    }
+
+    private async Task RegenerateRecoveryCodes()
+    {
+        if (_user == null) return;
+
+        _regeneratedCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10);
+        StateHasChanged();
+    }
+
+    private async Task CopyRegeneratedCodesToClipboard()
+    {
+        if (_regeneratedCodes != null)
+        {
+            var codesText = string.Join("\n", _regeneratedCodes);
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", codesText);
+        }
+    }
+
+    private async Task DownloadRegeneratedCodes()
+    {
+        if (_regeneratedCodes != null)
+        {
+            var codesText = string.Join("\n", _regeneratedCodes);
+            var fileName = $"beanstalk-recovery-codes-{DateTime.UtcNow:yyyyMMdd}.txt";
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", fileName, codesText);
+        }
+    }
+
+    private void ShowDisableTwoFactor()
+    {
+        _showDisable2FA = true;
+        _disable2FAError = null;
+        DisableModel = new();
+        StateHasChanged();
+    }
+
+    private void CancelDisable2FA()
+    {
+        _showDisable2FA = false;
+        _disable2FAError = null;
+        DisableModel = new();
+        StateHasChanged();
+    }
+
+    private async Task DisableTwoFactorAsync()
+    {
+        if (_user == null)
+        {
+            _disable2FAError = "User not found.";
+            return;
+        }
+
+        // Verify password
+        var passwordCheck = await SignInManager.CheckPasswordSignInAsync(_user, DisableModel.Password, false);
+        if (!passwordCheck.Succeeded)
+        {
+            _disable2FAError = "Incorrect password.";
+            return;
+        }
+
+        // Disable 2FA
+        await UserManager.SetTwoFactorEnabledAsync(_user, false);
+        await UserManager.ResetAuthenticatorKeyAsync(_user);
+
+        _twoFactorEnabled = false;
+        _showDisable2FA = false;
+        DisableModel = new();
+        StateHasChanged();
+    }
+
+    private enum TwoFactorSetupStep
+    {
+        NotStarted,
+        ShowingQrCode,
+        ShowingRecoveryCodes
+    }
+
+    private class VerifyCodeModel
+    {
+        [Required(ErrorMessage = "Verification code is required")]
+        public string Code { get; set; } = string.Empty;
+    }
+
+    private class DisableTwoFactorModel
+    {
+        [Required(ErrorMessage = "Password is required")]
         public string Password { get; set; } = string.Empty;
     }
 }

@@ -41,7 +41,11 @@
                         @foreach (var userInfo in _users)
                         {
                             <tr>
-                                <td>@userInfo.User.UserName</td>
+                                <td>
+                                    <a href="/edit/manage-user/@userInfo.User.Id" class="text-decoration-none">
+                                        @userInfo.User.UserName
+                                    </a>
+                                </td>
                                 <td>
                                     <select class="form-select form-select-sm" 
                                             @onchange="@(e => ChangeRoleAsync(userInfo.User, e.Value?.ToString() ?? "User"))"
