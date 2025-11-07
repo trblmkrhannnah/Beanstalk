@@ -7,7 +7,7 @@ Features
 --------
 
 - Username-only authentication (no email).
-- Usernames ≥ 5 characters, unique, URL-safe `[a-zA-Z0-9_-]`.
+- Usernames ≥ 5 characters (`[a-zA-Z0-9_-]`).
 - First registered user becomes Admin.
 - Admin can open/close registrations.
 - Users can:

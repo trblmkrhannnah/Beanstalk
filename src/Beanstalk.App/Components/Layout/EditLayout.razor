@@ -42,17 +42,22 @@
                 <AuthorizeView Roles="Admin">
                     <Authorized>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/edit/admin/settings" Match="NavLinkMatch.All">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Admin Settings
+                            <NavLink class="nav-link" href="/edit/settings" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Settings
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/edit/admin/users" Match="NavLinkMatch.All">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> User Management
+                            <NavLink class="nav-link" href="/edit/users" Match="NavLinkMatch.All">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Users
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/edit/account" Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Account
+                    </NavLink>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/home/logout" Match="NavLinkMatch.All">
                         <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Logout

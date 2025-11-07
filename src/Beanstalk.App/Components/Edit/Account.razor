@@ -1,0 +1,277 @@
+@page "/edit/account"
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+<AuthorizeView Context="auth">
+    <Authorized>
+        @if (_loading)
+        {
+            <p>Loading...</p>
+        }
+        else if (_user is null)
+        {
+            <p>User not found.</p>
+        }
+        else
+        {
+            <h3>Account Settings</h3>
+            
+            <!-- Change Password Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Change Password</h5>
+                    <EditForm Model="PasswordModel" OnValidSubmit="ChangePasswordAsync">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary/>
+                        
+                        @if (!string.IsNullOrEmpty(_passwordError))
+                        {
+                            <div class="alert alert-danger">@_passwordError</div>
+                        }
+                        
+                        @if (_passwordChanged)
+                        {
+                            <div class="alert alert-success">Password changed successfully.</div>
+                        }
+                        
+                        <div class="mb-3">
+                            <label for="current-password" class="form-label">Current Password</label>
+                            <InputText id="current-password" type="password" class="form-control" @bind-Value="PasswordModel.CurrentPassword"/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-password" class="form-label">New Password</label>
+                            <InputText id="new-password" type="password" class="form-control" @bind-Value="PasswordModel.NewPassword"/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm-password" class="form-label">Confirm New Password</label>
+                            <InputText id="confirm-password" type="password" class="form-control" @bind-Value="PasswordModel.ConfirmPassword"/>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Change Password</button>
+                    </EditForm>
+                </div>
+            </div>
+            
+            <!-- Delete Account Section -->
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Delete Account</h5>
+                    <p class="card-text">Once you delete your account, there is no going back. Please be certain.</p>
+                    
+                    @if (_deletingAccount)
+                    {
+                        <div class="alert alert-info">
+                            <strong>Deleting account...</strong> Please wait.
+                        </div>
+                    }
+                    else if (!_showDeleteConfirmation)
+                    {
+                        <button class="btn btn-danger" type="button" @onclick="ShowDeleteConfirmation">Delete Account</button>
+                    }
+                    else
+                    {
+                        <EditForm Model="DeleteModel" OnValidSubmit="DeleteAccountAsync">
+                            <DataAnnotationsValidator/>
+                            <ValidationSummary/>
+                            
+                            @if (!string.IsNullOrEmpty(_deleteError))
+                            {
+                                <div class="alert alert-danger">@_deleteError</div>
+                            }
+                            
+                            <div class="alert alert-warning">
+                                <strong>Warning:</strong> This action cannot be undone. All your data including your profile, links, and images will be permanently deleted.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="delete-password" class="form-label">Enter your password to confirm</label>
+                                <InputText id="delete-password" type="password" class="form-control" @bind-Value="DeleteModel.Password"/>
+                            </div>
+                            
+                            <button class="btn btn-danger me-2" type="submit">Yes, Delete My Account</button>
+                            <button class="btn btn-secondary" type="button" @onclick="CancelDelete">Cancel</button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <PleaseLogIn />
+    </NotAuthorized>
+</AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    private ChangePasswordModel PasswordModel { get; set; } = new();
+    private DeleteAccountModel DeleteModel { get; set; } = new();
+    private bool _loading = true;
+    private bool _passwordChanged;
+    private string? _passwordError;
+    private bool _showDeleteConfirmation;
+    private string? _deleteError;
+    private bool _deletingAccount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _passwordChanged = false;
+        _passwordError = null;
+        _deleteError = null;
+        
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+
+        _loading = false;
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        _passwordChanged = false;
+        _passwordError = null;
+
+        if (_user == null || PasswordModel == null)
+        {
+            _passwordError = "User not found.";
+            return;
+        }
+
+        if (PasswordModel.NewPassword != PasswordModel.ConfirmPassword)
+        {
+            _passwordError = "New password and confirmation do not match.";
+            return;
+        }
+
+        var result = await UserManager.ChangePasswordAsync(_user, PasswordModel.CurrentPassword, PasswordModel.NewPassword);
+
+        if (result.Succeeded)
+        {
+            _passwordChanged = true;
+            PasswordModel = new(); // Reset form
+            StateHasChanged();
+        }
+        else
+        {
+            _passwordError = string.Join(" ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private void ShowDeleteConfirmation()
+    {
+        _showDeleteConfirmation = true;
+        _deleteError = null;
+        StateHasChanged();
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirmation = false;
+        DeleteModel = new();
+        _deleteError = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        _deleteError = null;
+
+        if (_user == null || DeleteModel == null)
+        {
+            _deleteError = "User not found.";
+            return;
+        }
+
+        // Verify password before deletion
+        var passwordCheck = await SignInManager.CheckPasswordSignInAsync(_user, DeleteModel.Password, false);
+        if (!passwordCheck.Succeeded)
+        {
+            _deleteError = "Incorrect password. Account deletion cancelled.";
+            return;
+        }
+
+        // Set deleting state to show loading message
+        _deletingAccount = true;
+        StateHasChanged();
+
+        // Give UI time to render the "Deleting..." message
+        await Task.Delay(200);
+
+        // Delete user profile and related data
+        IdentityResult deleteResult;
+        try
+        {
+            var profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            if (profile != null)
+            {
+                // Delete profile links
+                var links = await Db.ProfileLinks.Where(l => l.ProfileId == profile.Id).ToListAsync();
+                Db.ProfileLinks.RemoveRange(links);
+
+                // Delete profile images
+                var images = await Db.ProfileImages.Where(i => i.ProfileId == profile.Id).ToListAsync();
+                Db.ProfileImages.RemoveRange(images);
+
+                // Delete profile
+                Db.UserProfiles.Remove(profile);
+            }
+
+            await Db.SaveChangesAsync();
+
+            // Delete the user account
+            deleteResult = await UserManager.DeleteAsync(_user);
+        }
+        catch (Exception)
+        {
+            _deletingAccount = false;
+            _deleteError = "An error occurred while deleting your account. Please try again.";
+            StateHasChanged();
+            return;
+        }
+
+        // Handle the result
+        if (deleteResult.Succeeded)
+        {
+            // Account deleted successfully - navigate to logout page which will clean up session
+            // Use forceLoad to ensure a clean browser-level navigation
+            Nav.NavigateTo("/home/logout", forceLoad: true);
+        }
+        else
+        {
+            _deletingAccount = false;
+            _deleteError = string.Join(" ", deleteResult.Errors.Select(e => e.Description));
+            StateHasChanged();
+        }
+    }
+
+    private class ChangePasswordModel
+    {
+        [Required(ErrorMessage = "Current password is required")]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required")]
+        [StringLength(100, ErrorMessage = "Password must be at least {2} characters long.", MinimumLength = 6)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password confirmation is required")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    private class DeleteAccountModel
+    {
+        [Required(ErrorMessage = "Password is required to delete account")]
+        public string Password { get; set; } = string.Empty;
+    }
+}
+
+
+

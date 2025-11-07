@@ -1,4 +1,4 @@
-@page "/edit/admin/users"
+@page "/edit/users"
 @rendermode InteractiveServer
 
 @using Beanstalk.App.Components.Common
@@ -16,7 +16,7 @@
 <CascadingAuthenticationState>
     <AuthorizeView Roles="Admin">
         <Authorized>
-            <h3>User Management</h3>
+            <h3>Users</h3>
             
             @if (_loading)
             {
@@ -239,4 +239,5 @@
         public bool IsAdmin { get; set; }
     }
 }
+
 

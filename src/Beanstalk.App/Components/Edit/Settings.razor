@@ -1,4 +1,4 @@
-@page "/edit/admin/settings"
+@page "/edit/settings"
 @rendermode InteractiveServer
 
 @using Beanstalk.App.Components.Common
@@ -12,7 +12,7 @@
 <CascadingAuthenticationState>
     <AuthorizeView Roles="Admin">
         <Authorized>
-            <h3>Admin Settings</h3>
+            <h3>Settings</h3>
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" role="switch" id="regsOpen" @bind="_registrationsOpen"/>
                 <label class="form-check-label" for="regsOpen">Registrations Open</label>
@@ -54,5 +54,6 @@
     }
 
 }
+
 
 
