@@ -18,6 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProfileLink> ProfileLinks => Set<ProfileLink>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
     public DbSet<ThemePalette> ThemePalettes => Set<ThemePalette>();
+    public DbSet<InviteLink> InviteLinks => Set<InviteLink>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -77,6 +78,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.Property(t => t.ContainerBackground).IsRequired();
             entity.Property(t => t.ContainerForeground).IsRequired();
             entity.Property(t => t.IsDefault).HasDefaultValue(false);
+        });
+
+        builder.Entity<InviteLink>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Code).IsRequired();
+            entity.HasIndex(i => i.Code).IsUnique();
+            entity.HasIndex(i => i.IsActive);
+            entity.Property(i => i.CreatedUtc).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(i => i.CurrentUses).HasDefaultValue(0);
+            entity.Property(i => i.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(i => i.CreatedBy)
+                .WithMany()
+                .HasForeignKey(i => i.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

@@ -1,24 +1,31 @@
-@page "/home/register"
+@page "/join/{InviteCode}"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text.RegularExpressions
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
 
-<h3>Register</h3>
+<h3>Join via Invite</h3>
 
-@if (!_registrationsOpen)
+@if (!_inviteValid)
 {
-    <p>Registrations are currently closed.</p>
+    <div class="alert alert-danger" role="alert">
+        <p><strong>Invalid or expired invite link.</strong></p>
+        <p>@_inviteErrorMessage</p>
+    </div>
+    <p><a class="btn btn-primary" href="/">Go to Home</a></p>
 }
 else
 {
-    <EditForm Model="Model" OnValidSubmit="RegisterAsync" FormName="register" method="post">
+    <p>You've been invited to join Beanstalk! Create your account below.</p>
+    
+    <EditForm Model="Model" OnValidSubmit="RegisterAsync" FormName="register-invite" method="post">
         <DataAnnotationsValidator />
         <ValidationSummary />
         @if (!string.IsNullOrEmpty(_validationMessage))
@@ -44,19 +51,72 @@ else
 }
 
 @code {
-    private bool _registrationsOpen = true;
+    [Parameter]
+    public string InviteCode { get; set; } = string.Empty;
+
+    private bool _inviteValid = false;
+    private string _inviteErrorMessage = string.Empty;
+    private InviteLink? _invite;
 
     [SupplyParameterFromForm]
     private RegisterModel Model { get; set; } = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var setting = Db.AppSettings.Find("RegistrationsOpen");
-        _registrationsOpen = !(setting?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? false);
+        await ValidateInviteAsync();
+    }
+
+    private async Task ValidateInviteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(InviteCode))
+        {
+            _inviteValid = false;
+            _inviteErrorMessage = "No invite code provided.";
+            return;
+        }
+
+        _invite = await Db.InviteLinks
+            .FirstOrDefaultAsync(i => i.Code == InviteCode);
+
+        if (_invite == null)
+        {
+            _inviteValid = false;
+            _inviteErrorMessage = "This invite link does not exist.";
+            return;
+        }
+
+        if (!_invite.IsActive)
+        {
+            _inviteValid = false;
+            _inviteErrorMessage = "This invite link has been deactivated.";
+            return;
+        }
+
+        if (_invite.MaxUses.HasValue && _invite.CurrentUses >= _invite.MaxUses.Value)
+        {
+            _inviteValid = false;
+            _inviteErrorMessage = "This invite link has reached its maximum number of uses.";
+            return;
+        }
+
+        if (_invite.ExpiresUtc.HasValue && _invite.ExpiresUtc.Value < DateTime.UtcNow)
+        {
+            _inviteValid = false;
+            _inviteErrorMessage = "This invite link has expired.";
+            return;
+        }
+
+        _inviteValid = true;
     }
 
     private async Task RegisterAsync()
     {
+        if (_invite == null)
+        {
+            _validationMessage = "Invalid invite link.";
+            return;
+        }
+
         _validationMessage = null;
         var username = Model.Username?.Trim() ?? string.Empty;
         if (username.Length < 5)
@@ -82,6 +142,16 @@ else
             return;
         }
 
+        // Revalidate invite before proceeding (check for race conditions)
+        var currentInvite = await Db.InviteLinks.FirstOrDefaultAsync(i => i.Code == InviteCode);
+        if (currentInvite == null || !currentInvite.IsActive || 
+            (currentInvite.MaxUses.HasValue && currentInvite.CurrentUses >= currentInvite.MaxUses.Value))
+        {
+            _validationMessage = "This invite link is no longer valid.";
+            return;
+        }
+
+        // Create user (UserManager handles its own transaction)
         var user = new ApplicationUser { UserName = username, IsEnabled = true };
         var result = await UserManager.CreateAsync(user, Model.Password);
         if (!result.Succeeded)
@@ -90,15 +160,26 @@ else
             return;
         }
 
+        // Create profile and update invite usage
         Db.UserProfiles.Add(new UserProfile
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             CreatedUtc = DateTime.UtcNow
         });
-        await Db.SaveChangesAsync();
 
-        // First-user-admin bootstrap
+        // Increment invite uses
+        _invite.CurrentUses++;
+        
+        // Auto-deactivate if max uses reached
+        if (_invite.MaxUses.HasValue && _invite.CurrentUses >= _invite.MaxUses.Value)
+        {
+            _invite.IsActive = false;
+        }
+
+        await Db.SaveChangesAsync();
+        
+        // First-user-admin bootstrap (though this is unlikely via invite)
         var userCount = await Db.Users.CountAsync();
         if (userCount == 1)
         {
@@ -131,5 +212,6 @@ else
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
+
 
 

@@ -1,0 +1,272 @@
+@page "/edit/invites"
+@rendermode InteractiveServer
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Cryptography
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <h3>Invite Links</h3>
+            
+            <div class="mb-3">
+                <button class="btn btn-primary" @onclick="ShowCreateForm">Create Invite</button>
+            </div>
+
+            @if (_showCreateForm)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Create New Invite Link</h5>
+                        <div class="mb-3">
+                            <label for="maxUses" class="form-label">Max Uses</label>
+                            <select id="maxUses" class="form-select" @bind="_newInviteMaxUses">
+                                <option value="1">1 use</option>
+                                <option value="5">5 uses</option>
+                                <option value="10">10 uses</option>
+                                <option value="25">25 uses</option>
+                                <option value="50">50 uses</option>
+                                <option value="">Unlimited</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <button class="btn btn-success" @onclick="CreateInviteAsync">Create</button>
+                            <button class="btn btn-secondary ms-2" @onclick="HideCreateForm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (_loading)
+            {
+                <p>Loading invites...</p>
+            }
+            else if (_invites.Count == 0)
+            {
+                <p>No invite links found. Create one to get started.</p>
+            }
+            else
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Link</th>
+                            <th>Uses</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invite in _invites)
+                        {
+                            var isExpired = IsExpired(invite);
+                            var statusClass = isExpired ? "text-danger" : (invite.IsActive ? "text-success" : "text-warning");
+                            var statusText = isExpired ? "Expired" : (invite.IsActive ? "Active" : "Inactive");
+                            var usesText = invite.MaxUses.HasValue ? $"{invite.CurrentUses}/{invite.MaxUses}" : $"{invite.CurrentUses}/∞";
+                            var inviteUrl = $"{Nav.BaseUri}join/{invite.Code}";
+                            
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <code class="me-2">@invite.Code</code>
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                @onclick="@(() => CopyToClipboardAsync(inviteUrl))"
+                                                title="Copy full link">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>@usesText</td>
+                                <td>
+                                    <span class="@statusClass fw-bold">@statusText</span>
+                                </td>
+                                <td>@invite.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @if (!isExpired)
+                                    {
+                                        <button class="btn btn-sm @(invite.IsActive ? "btn-warning" : "btn-success") me-1" 
+                                                @onclick="@(() => ToggleActiveAsync(invite))">
+                                            @(invite.IsActive ? "Deactivate" : "Activate")
+                                        </button>
+                                    }
+                                    <button class="btn btn-sm btn-danger" 
+                                            @onclick="@(() => DeleteInviteAsync(invite))">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            
+            @if (!string.IsNullOrEmpty(_message))
+            {
+                <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") mt-3" role="alert">
+                    @_message
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <NotAuthorised />
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private List<InviteLink> _invites = new();
+    private bool _loading = true;
+    private string? _message;
+    private bool _messageIsError;
+    private bool _showCreateForm = false;
+    private string? _newInviteMaxUses = "10";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvitesAsync();
+    }
+
+    private async Task LoadInvitesAsync()
+    {
+        _loading = true;
+        _invites = await Db.InviteLinks
+            .Include(i => i.CreatedBy)
+            .OrderByDescending(i => i.CreatedUtc)
+            .ToListAsync();
+        _loading = false;
+    }
+
+    private void ShowCreateForm()
+    {
+        _showCreateForm = true;
+        _message = null;
+    }
+
+    private void HideCreateForm()
+    {
+        _showCreateForm = false;
+        _newInviteMaxUses = "10";
+    }
+
+    private async Task CreateInviteAsync()
+    {
+        _message = null;
+        _messageIsError = false;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var currentUser = await UserManager.GetUserAsync(authState.User);
+        
+        if (currentUser == null)
+        {
+            _message = "Unable to determine current user.";
+            _messageIsError = true;
+            return;
+        }
+
+        // Generate a unique, URL-safe code
+        var code = GenerateInviteCode();
+
+        // Parse max uses
+        int? maxUses = null;
+        if (!string.IsNullOrEmpty(_newInviteMaxUses) && int.TryParse(_newInviteMaxUses, out var parsedMaxUses))
+        {
+            maxUses = parsedMaxUses;
+        }
+
+        var invite = new InviteLink
+        {
+            Id = Guid.NewGuid(),
+            Code = code,
+            CreatedByUserId = currentUser.Id,
+            CreatedUtc = DateTime.UtcNow,
+            MaxUses = maxUses,
+            CurrentUses = 0,
+            IsActive = true
+        };
+
+        Db.InviteLinks.Add(invite);
+        await Db.SaveChangesAsync();
+
+        _message = "Invite link created successfully!";
+        _messageIsError = false;
+        _showCreateForm = false;
+        _newInviteMaxUses = "10";
+        
+        await LoadInvitesAsync();
+    }
+
+    private async Task ToggleActiveAsync(InviteLink invite)
+    {
+        invite.IsActive = !invite.IsActive;
+        await Db.SaveChangesAsync();
+        
+        _message = $"Invite link {(invite.IsActive ? "activated" : "deactivated")}.";
+        _messageIsError = false;
+    }
+
+    private async Task DeleteInviteAsync(InviteLink invite)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to delete this invite link? This action cannot be undone.");
+        
+        if (!confirmed)
+        {
+            return;
+        }
+
+        Db.InviteLinks.Remove(invite);
+        await Db.SaveChangesAsync();
+        
+        _message = "Invite link deleted.";
+        _messageIsError = false;
+        
+        await LoadInvitesAsync();
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        _message = "Link copied to clipboard!";
+        _messageIsError = false;
+    }
+
+    private bool IsExpired(InviteLink invite)
+    {
+        if (!invite.IsActive)
+            return false; // Not expired, just inactive
+        
+        if (invite.MaxUses.HasValue && invite.CurrentUses >= invite.MaxUses.Value)
+            return true;
+        
+        if (invite.ExpiresUtc.HasValue && invite.ExpiresUtc.Value < DateTime.UtcNow)
+            return true;
+        
+        return false;
+    }
+
+    private string GenerateInviteCode()
+    {
+        // Generate a URL-safe code
+        var bytes = RandomNumberGenerator.GetBytes(8);
+        var code = Convert.ToBase64String(bytes)
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "")
+            .Substring(0, 10);
+        return code;
+    }
+}
+
+
+
