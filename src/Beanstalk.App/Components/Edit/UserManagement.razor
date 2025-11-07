@@ -1,0 +1,242 @@
+@page "/edit/admin/users"
+@rendermode InteractiveServer
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <h3>User Management</h3>
+            
+            @if (_loading)
+            {
+                <p>Loading users...</p>
+            }
+            else if (_users.Count == 0)
+            {
+                <p>No users found.</p>
+            }
+            else
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var userInfo in _users)
+                        {
+                            <tr>
+                                <td>@userInfo.User.UserName</td>
+                                <td>
+                                    <select class="form-select form-select-sm" 
+                                            @onchange="@(e => ChangeRoleAsync(userInfo.User, e.Value?.ToString() ?? "User"))"
+                                            disabled="@(userInfo.User.Id == _currentUserId)">
+                                        <option value="User" selected="@(!userInfo.IsAdmin)">User</option>
+                                        <option value="Admin" selected="@userInfo.IsAdmin">Admin</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               role="switch"
+                                               checked="@userInfo.User.IsEnabled"
+                                               disabled="@(userInfo.User.Id == _currentUserId)"
+                                               @onchange="@(e => ToggleEnabledAsync(userInfo.User, e.Value as bool? ?? false))" />
+                                        <label class="form-check-label">
+                                            @(userInfo.User.IsEnabled ? "Enabled" : "Disabled")
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" 
+                                            @onclick="@(() => DeleteUserAsync(userInfo.User))"
+                                            disabled="@(userInfo.User.Id == _currentUserId)">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            
+            @if (!string.IsNullOrEmpty(_message))
+            {
+                <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") mt-3" role="alert">
+                    @_message
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <NotAuthorised />
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private List<UserInfo> _users = new();
+    private bool _loading = true;
+    private string? _message;
+    private bool _messageIsError;
+    private Guid _currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var currentUser = await UserManager.GetUserAsync(authState.User);
+        if (currentUser != null)
+        {
+            _currentUserId = currentUser.Id;
+        }
+
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        _users.Clear();
+
+        var allUsers = await Db.Users.OrderBy(u => u.UserName).ToListAsync();
+        
+        foreach (var user in allUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            _users.Add(new UserInfo
+            {
+                User = user,
+                IsAdmin = roles.Contains("Admin")
+            });
+        }
+
+        _loading = false;
+    }
+
+    private async Task ToggleEnabledAsync(ApplicationUser user, bool enabled)
+    {
+        if (user.Id == _currentUserId)
+        {
+            _message = "You cannot disable your own account.";
+            _messageIsError = true;
+            return;
+        }
+
+        user.IsEnabled = enabled;
+        var result = await UserManager.UpdateAsync(user);
+        
+        if (result.Succeeded)
+        {
+            _message = $"User '{user.UserName}' has been {(enabled ? "enabled" : "disabled")}.";
+            _messageIsError = false;
+        }
+        else
+        {
+            _message = $"Failed to update user: {string.Join("; ", result.Errors.Select(e => e.Description))}";
+            _messageIsError = true;
+            await LoadUsersAsync(); // Reload to reset UI
+        }
+    }
+
+    private async Task ChangeRoleAsync(ApplicationUser user, string newRole)
+    {
+        if (user.Id == _currentUserId)
+        {
+            _message = "You cannot change your own role.";
+            _messageIsError = true;
+            return;
+        }
+
+        // Ensure the Admin role exists
+        const string adminRole = "Admin";
+        if (!await RoleManager.RoleExistsAsync(adminRole))
+        {
+            await RoleManager.CreateAsync(new IdentityRole<Guid>(adminRole));
+        }
+
+        // Get current roles
+        var currentRoles = await UserManager.GetRolesAsync(user);
+        
+        // Remove from all roles
+        if (currentRoles.Count > 0)
+        {
+            var removeResult = await UserManager.RemoveFromRolesAsync(user, currentRoles);
+            if (!removeResult.Succeeded)
+            {
+                _message = $"Failed to remove roles: {string.Join("; ", removeResult.Errors.Select(e => e.Description))}";
+                _messageIsError = true;
+                return;
+            }
+        }
+
+        // Add to new role if it's Admin
+        if (newRole == "Admin")
+        {
+            var addResult = await UserManager.AddToRoleAsync(user, adminRole);
+            if (!addResult.Succeeded)
+            {
+                _message = $"Failed to add role: {string.Join("; ", addResult.Errors.Select(e => e.Description))}";
+                _messageIsError = true;
+                return;
+            }
+        }
+
+        _message = $"User '{user.UserName}' role changed to {newRole}.";
+        _messageIsError = false;
+        await LoadUsersAsync(); // Reload to update UI
+    }
+
+    private async Task DeleteUserAsync(ApplicationUser user)
+    {
+        if (user.Id == _currentUserId)
+        {
+            _message = "You cannot delete your own account.";
+            _messageIsError = true;
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to permanently delete user '{user.UserName}'? This action cannot be undone.");
+        
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await UserManager.DeleteAsync(user);
+        
+        if (result.Succeeded)
+        {
+            _message = $"User '{user.UserName}' has been permanently deleted.";
+            _messageIsError = false;
+            await LoadUsersAsync(); // Reload to update list
+        }
+        else
+        {
+            _message = $"Failed to delete user: {string.Join("; ", result.Errors.Select(e => e.Description))}";
+            _messageIsError = true;
+        }
+    }
+
+    private class UserInfo
+    {
+        public ApplicationUser User { get; set; } = null!;
+        public bool IsAdmin { get; set; }
+    }
+}
+
