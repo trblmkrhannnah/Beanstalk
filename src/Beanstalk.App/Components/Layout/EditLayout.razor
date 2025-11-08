@@ -1,5 +1,6 @@
 @using Beanstalk.Database.Entities
-@inject UserManager<ApplicationUser> UserManager
+@using Beanstalk.Database.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inherits LayoutComponentBase
 
@@ -109,7 +110,13 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = await UserManager.GetUserAsync(authState.User);
-        _username = user?.UserName;
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+        if (!string.IsNullOrEmpty(userId) && Guid.TryParse(userId, out var userGuid))
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userGuid);
+            _username = user?.UserName;
+        }
     }
 }
