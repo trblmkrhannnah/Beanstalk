@@ -1,0 +1,149 @@
+@page "/edit/"
+@page "/edit/bio"
+@* @rendermode InteractiveServer *@
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<CascadingAuthenticationState>
+    <AuthorizeView Context="auth">
+        <Authorized>
+            @if (_loading)
+            {
+                <p class="text-center text-gray-600 text-lg py-12">Loading dashboard...</p>
+            }
+            else if (Model is null || _user is null)
+            {
+                <div class="card-cute text-center py-12">
+                    <p class="text-gray-600">Profile not found.</p>
+                </div>
+            }
+            else
+            {
+                <h3 class="text-3xl font-bold mb-4 text-gray-900">Bio</h3>
+                <p class="text-gray-600 mb-8">Edit your presence, title, and bio.</p>
+
+                <div class="card-cute mb-6">
+                    <h4 class="text-xl font-semibold mb-4 text-gray-800">Profile Settings</h4>
+                    <EditForm Model="Model" OnValidSubmit="SaveAsync" FormName="dashboard" method="post"
+                              class="space-y-4">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary
+                            class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
+                        <div class="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <InputCheckbox
+                                class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
+                                id="enabled" @bind-Value="Model.UserEnabled"/>
+                            <label class="ml-3 text-sm font-medium text-gray-700 cursor-pointer" for="enabled">Enable
+                                my profile page</label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                            <InputText class="input-cute" @bind-Value="Model.DisplayName"
+                                       placeholder="Your display name"/>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                            <InputTextArea class="input-cute min-h-[100px]" @bind-Value="Model.Bio"
+                                           placeholder="Tell visitors about yourself..."/>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button class="btn-primary" type="submit">Save Changes</button>
+                            @if (_saved)
+                            {
+                                <span class="text-green-600 font-medium">Saved successfully!</span>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <PleaseLogIn/>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    [SupplyParameterFromForm] private DashboardModel? Model { get; set; }
+    private bool _loading = true;
+    private bool _saved;
+    private string? _username;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _saved = false;
+
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+
+        if (_user != null)
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            _username = _user.UserName;
+
+            if (Model == null)
+            {
+                Model = new();
+
+                Model.UserEnabled = _user.IsEnabled;
+                Model.DisplayName = profile?.DisplayName;
+                Model.Bio = profile?.Bio;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_user == null)
+            return;
+
+        // Update user enabled status
+        var userToUpdate = await UserManager.FindByIdAsync(_user.Id.ToString());
+        if (userToUpdate != null)
+        {
+            userToUpdate.IsEnabled = Model.UserEnabled;
+            await UserManager.UpdateAsync(userToUpdate);
+
+            // Update our local reference
+            _user.IsEnabled = Model.UserEnabled;
+        }
+
+        // Update profile
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+
+        if (profile == null)
+        {
+            profile = new UserProfile { Id = Guid.NewGuid(), UserId = _user.Id, CreatedUtc = DateTime.UtcNow };
+            db.UserProfiles.Add(profile);
+        }
+
+        profile.DisplayName = Model.DisplayName;
+        profile.Bio = Model.Bio;
+        await db.SaveChangesAsync();
+
+        // Refresh local reference
+        _saved = true;
+    }
+
+
+    private class DashboardModel
+    {
+        public bool UserEnabled { get; set; }
+        public string? DisplayName { get; set; }
+        public string? Bio { get; set; }
+    }
+
+}
