@@ -24,12 +24,20 @@
     border-radius: 0.5rem;
     font-weight: 600;
     transition: all 0.2s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .btn-primary:hover {
     background: #4f46e5;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(0);
   }
   
   .btn-secondary {
@@ -40,12 +48,24 @@
     font-weight: 600;
     border: 1px solid #e5e7eb;
     transition: all 0.2s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .btn-secondary:hover {
     background: #f9fafb;
     border-color: #d1d5db;
     color: #1f2937;
+  }
+  
+  @media (max-width: 640px) {
+    .btn-primary,
+    .btn-secondary {
+      padding: 0.875rem 1.5rem;
+      width: 100%;
+    }
   }
   
   .card-cute {
@@ -61,6 +81,13 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
+  @media (max-width: 640px) {
+    .card-cute {
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+  }
+  
   .input-cute {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -68,12 +95,20 @@
     border-radius: 0.5rem;
     background: white;
     transition: all 0.2s ease;
+    font-size: 16px; /* Prevents zoom on iOS */
   }
   
   .input-cute:focus {
     outline: none;
     border-color: #6366f1;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  @media (max-width: 640px) {
+    .input-cute {
+      padding: 0.875rem 1rem;
+      min-height: 44px;
+    }
   }
   
   .stat-card {
@@ -87,6 +122,12 @@
   
   .stat-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (max-width: 640px) {
+    .stat-card {
+      padding: 1rem;
+    }
   }
   
   .theme-card {

@@ -25,11 +25,11 @@
             }
             else
             {
-                <h3 class="text-3xl font-bold mb-4 text-gray-900">Bio</h3>
-                <p class="text-gray-600 mb-8">Edit your presence, title, and bio.</p>
+                <h3 class="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-gray-900">Bio</h3>
+                <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">Edit your presence, title, and bio.</p>
 
                 <div class="card-cute mb-6">
-                    <h4 class="text-xl font-semibold mb-4 text-gray-800">Profile Settings</h4>
+                    <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Profile Settings</h4>
                     <EditForm Model="Model" OnValidSubmit="SaveAsync" FormName="dashboard" method="post"
                               class="space-y-4">
                         <DataAnnotationsValidator/>

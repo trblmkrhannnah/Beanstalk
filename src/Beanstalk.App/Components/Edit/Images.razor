@@ -25,8 +25,8 @@
             }
             else
             {
-                <h3 class="text-3xl font-bold mb-4 text-gray-900">Images</h3>
-                <p class="text-gray-600 mb-8">Manage your profile images.</p>
+                <h3 class="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-gray-900">Images</h3>
+                <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">Manage your profile images.</p>
 
                 <div class="space-y-6">
                     <div class="mb-6">
@@ -37,9 +37,9 @@
 
                     <!-- Stats Card -->
                     <div class="card-cute mb-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-xl font-semibold text-gray-800">Image Storage</h4>
-                            <span class="text-gray-600">@_images.Count / @_maxImages</span>
+                        <div class="flex items-center justify-between mb-3 sm:mb-4">
+                            <h4 class="text-lg sm:text-xl font-semibold text-gray-800">Image Storage</h4>
+                            <span class="text-sm sm:text-base text-gray-600">@_images.Count / @_maxImages</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2.5">
                             <div class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" 
@@ -117,9 +117,9 @@
             {
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @onclick="CloseUploadModal">
                     <div class="card-cute max-w-2xl w-full max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
-                        <div class="flex items-center justify-between mb-6">
-                            <h4 class="text-2xl font-semibold text-gray-800">Upload Profile Image</h4>
-                            <button class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" 
+                        <div class="flex items-center justify-between mb-4 sm:mb-6">
+                            <h4 class="text-xl sm:text-2xl font-semibold text-gray-800">Upload Profile Image</h4>
+                            <button class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" 
                                     @onclick="CloseUploadModal">
                                 ×
                             </button>
