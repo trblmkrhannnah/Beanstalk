@@ -21,264 +21,269 @@
     <Authorized>
         @if (_loading)
         {
-            <p>Loading...</p>
+            <p class="text-center text-gray-600 text-lg py-12">Loading account settings...</p>
         }
         else if (_user is null)
         {
-            <p>User not found.</p>
+            <div class="card-cute p-8 text-center">
+                <p class="text-red-500 font-semibold text-xl">User not found.</p>
+            </div>
         }
         else
         {
-            <h3>Account Settings</h3>
+            <h3 class="text-3xl font-bold mb-4 text-gray-900">Account Settings</h3>
+            <p class="text-gray-600 mb-8">Manage your account security and preferences.</p>
             
             <!-- Change Password Section -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Change Password</h5>
-                    <EditForm Model="PasswordModel" OnValidSubmit="ChangePasswordAsync">
-                        <DataAnnotationsValidator/>
-                        <ValidationSummary/>
-                        
-                        @if (!string.IsNullOrEmpty(_passwordError))
-                        {
-                            <div class="alert alert-danger">@_passwordError</div>
-                        }
-                        
-                        @if (_passwordChanged)
-                        {
-                            <div class="alert alert-success">Password changed successfully.</div>
-                        }
-                        
-                        <div class="mb-3">
-                            <label for="current-password" class="form-label">Current Password</label>
-                            <InputText id="current-password" type="password" class="form-control" @bind-Value="PasswordModel.CurrentPassword"/>
-                        </div>
-                        <div class="mb-3">
-                            <label for="new-password" class="form-label">New Password</label>
-                            <InputText id="new-password" type="password" class="form-control" @bind-Value="PasswordModel.NewPassword"/>
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirm-password" class="form-label">Confirm New Password</label>
-                            <InputText id="confirm-password" type="password" class="form-control" @bind-Value="PasswordModel.ConfirmPassword"/>
-                        </div>
-                        <button class="btn btn-primary" type="submit">Change Password</button>
-                    </EditForm>
-                </div>
+            <div class="card-cute mb-6">
+                <h4 class="text-xl font-semibold mb-4 text-gray-800">Change Password</h4>
+                <EditForm Model="PasswordModel" OnValidSubmit="ChangePasswordAsync" class="space-y-4">
+                    <DataAnnotationsValidator/>
+                    <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
+                    
+                    @if (!string.IsNullOrEmpty(_passwordError))
+                    {
+                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">@_passwordError</div>
+                    }
+                    
+                    @if (_passwordChanged)
+                    {
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">Password changed successfully!</div>
+                    }
+                    
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <InputText id="current-password" type="password" class="input-cute" @bind-Value="PasswordModel.CurrentPassword"/>
+                    </div>
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <InputText id="new-password" type="password" class="input-cute" @bind-Value="PasswordModel.NewPassword"/>
+                    </div>
+                    <div>
+                        <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <InputText id="confirm-password" type="password" class="input-cute" @bind-Value="PasswordModel.ConfirmPassword"/>
+                    </div>
+                    <button class="btn-primary" type="submit">Change Password</button>
+                </EditForm>
             </div>
 
             
             <!-- Two-Factor Authentication Section -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Two-Factor Authentication</h5>
-                    
-                    @if (_twoFactorLoading)
+            <div class="card-cute mb-6">
+                <h4 class="text-xl font-semibold mb-4 text-gray-800">Two-Factor Authentication</h4>
+                
+                @if (_twoFactorLoading)
+                {
+                    <p class="text-center text-gray-600 py-4">Loading 2FA status...</p>
+                }
+                else if (!_twoFactorEnabled)
+                {
+                    @if (_setupStep == TwoFactorSetupStep.NotStarted)
                     {
-                        <p>Loading...</p>
+                        <p class="text-gray-700 mb-4">Add an extra layer of security to your account by enabling two-factor authentication (2FA). You'll need an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy.</p>
+                        <button class="btn-primary" type="button" @onclick="StartTwoFactorSetup">Enable Two-Factor Authentication</button>
                     }
-                    else if (!_twoFactorEnabled)
+                    else if (_setupStep == TwoFactorSetupStep.ShowingQrCode)
                     {
-                        @if (_setupStep == TwoFactorSetupStep.NotStarted)
+                        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 mb-4">
+                            <strong>Step 1 of 2:</strong> Scan the QR code or enter the key manually
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(_qrCodeImageUrl))
                         {
-                            <p class="card-text">Add an extra layer of security to your account by enabling two-factor authentication (2FA). You'll need an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy.</p>
-                            <button class="btn btn-primary" type="button" @onclick="StartTwoFactorSetup">Enable Two-Factor Authentication</button>
-                        }
-                        else if (_setupStep == TwoFactorSetupStep.ShowingQrCode)
-                        {
-                            <div class="alert alert-info">
-                                <strong>Step 1 of 2:</strong> Scan the QR code or enter the key manually
+                            <div class="text-center mb-4 p-4 bg-white rounded-lg border border-gray-200">
+                                <img src="@_qrCodeImageUrl" alt="QR Code" class="max-w-[300px] mx-auto" />
                             </div>
+                        }
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Manual Entry Key</label>
+                            <div class="flex gap-2">
+                                <input type="text" class="flex-1 input-cute font-mono bg-gray-50" value="@_authenticatorKey" readonly />
+                                <button class="btn-secondary" type="button" @onclick="CopyKeyToClipboard">📋 Copy</button>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">Enter this key into your authenticator app if you can't scan the QR code.</p>
+                        </div>
+                        
+                        <EditForm Model="VerifySetupModel" OnValidSubmit="VerifyTwoFactorSetup" class="space-y-4">
+                            <DataAnnotationsValidator/>
+                            <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
                             
-                            @if (!string.IsNullOrEmpty(_qrCodeImageUrl))
+                            @if (!string.IsNullOrEmpty(_setupError))
                             {
-                                <div class="text-center mb-3">
-                                    <img src="@_qrCodeImageUrl" alt="QR Code" style="max-width: 300px;" />
-                                </div>
+                                <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">@_setupError</div>
                             }
                             
-                            <div class="mb-3">
-                                <label class="form-label">Manual Entry Key</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" value="@_authenticatorKey" readonly />
-                                    <button class="btn btn-outline-secondary" type="button" @onclick="CopyKeyToClipboard">Copy</button>
-                                </div>
-                                <small class="form-text text-muted">Enter this key into your authenticator app if you can't scan the QR code.</small>
+                            <div>
+                                <label for="verify-code" class="block text-sm font-medium text-gray-700 mb-2">Verification Code</label>
+                                <InputText id="verify-code" class="input-cute" @bind-Value="VerifySetupModel.Code" placeholder="000000" maxlength="6"/>
+                                <p class="text-sm text-gray-600 mt-2">Enter the 6-digit code from your authenticator app to verify.</p>
                             </div>
                             
-                            <EditForm Model="VerifySetupModel" OnValidSubmit="VerifyTwoFactorSetup">
-                                <DataAnnotationsValidator/>
-                                <ValidationSummary/>
-                                
-                                @if (!string.IsNullOrEmpty(_setupError))
-                                {
-                                    <div class="alert alert-danger">@_setupError</div>
-                                }
-                                
-                                <div class="mb-3">
-                                    <label for="verify-code" class="form-label">Verification Code</label>
-                                    <InputText id="verify-code" class="form-control" @bind-Value="VerifySetupModel.Code" placeholder="000000" maxlength="6"/>
-                                    <small class="form-text text-muted">Enter the 6-digit code from your authenticator app to verify.</small>
-                                </div>
-                                
-                                <button class="btn btn-primary me-2" type="submit">Verify & Continue</button>
-                                <button class="btn btn-secondary" type="button" @onclick="CancelTwoFactorSetup">Cancel</button>
-                            </EditForm>
-                        }
-                        else if (_setupStep == TwoFactorSetupStep.ShowingRecoveryCodes)
+                            <div class="flex gap-3">
+                                <button class="btn-primary" type="submit">✅ Verify & Continue</button>
+                                <button class="btn-secondary" type="button" @onclick="CancelTwoFactorSetup">Cancel</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (_setupStep == TwoFactorSetupStep.ShowingRecoveryCodes)
+                    {
+                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 mb-4">
+                            <strong>Step 2 of 2:</strong> Save your recovery codes
+                        </div>
+                        
+                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+                            <strong>Important:</strong> Save these recovery codes in a safe place. Each code can only be used once. If you lose access to your authenticator device, you'll need these codes to log in.
+                        </div>
+                        
+                        @if (_recoveryCodes != null && _recoveryCodes.Any())
                         {
-                            <div class="alert alert-warning">
-                                <strong>Step 2 of 2:</strong> Save your recovery codes
+                            <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div class="font-mono text-sm" style="column-count: 2; column-gap: 20px;">
+                                    @foreach (var recoveryCode in _recoveryCodes)
+                                    {
+                                        <div class="mb-2">@recoveryCode</div>
+                                    }
+                                </div>
                             </div>
                             
-                            <div class="alert alert-danger">
-                                <strong>Important:</strong> Save these recovery codes in a safe place. Each code can only be used once. If you lose access to your authenticator device, you'll need these codes to log in.
+                            <div class="flex gap-3 mb-4">
+                                <button class="btn-secondary" type="button" @onclick="CopyRecoveryCodesToClipboard">Copy All Codes</button>
+                                <button class="btn-secondary" type="button" @onclick="DownloadRecoveryCodes">Download Codes</button>
                             </div>
+                        }
+                        
+                        <div class="flex items-center mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <input class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" type="checkbox" id="confirm-saved" @bind="_confirmSavedCodes" />
+                            <label class="ml-2 text-sm font-medium text-gray-700 cursor-pointer" for="confirm-saved">
+                                I have saved my recovery codes in a safe place
+                            </label>
+                        </div>
+                        
+                        <button class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed" type="button" @onclick="FinishTwoFactorSetup" disabled="@(!_confirmSavedCodes)">
+                            Finish Setup
+                        </button>
+                    }
+                }
+                else
+                {
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-4">
+                        <strong>Two-factor authentication is enabled</strong> - Your account is protected with an additional security layer.
+                    </div>
+                    
+                    <div class="mb-4 flex gap-3">
+                        <button class="btn-secondary" type="button" @onclick="ShowRegenerateRecoveryCodes">Regenerate Recovery Codes</button>
+                        <button class="px-6 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors" type="button" @onclick="ShowDisableTwoFactor">Disable 2FA</button>
+                    </div>
+                    
+                    @if (_showRegenerateCodes)
+                    {
+                        <div class="card-cute border-2 border-yellow-300">
+                            <h5 class="text-lg font-semibold mb-2">Regenerate Recovery Codes</h5>
+                            <p class="text-gray-700 mb-4">This will generate new recovery codes and invalidate your old ones. Make sure to save the new codes.</p>
                             
-                            @if (_recoveryCodes != null && _recoveryCodes.Any())
+                            @if (_regeneratedCodes != null && _regeneratedCodes.Any())
                             {
-                                <div class="mb-3">
-                                    <div class="border rounded p-3 bg-light font-monospace" style="column-count: 2; column-gap: 20px;">
-                                        @foreach (var recoveryCode in _recoveryCodes)
+                            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 mb-4">
+                                <strong>Your new recovery codes:</strong>
+                            </div>
+                                
+                                <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div class="font-mono text-sm" style="column-count: 2; column-gap: 20px;">
+                                        @foreach (var recoveryCode in _regeneratedCodes)
                                         {
-                                            <div class="mb-1">@recoveryCode</div>
+                                            <div class="mb-2">@recoveryCode</div>
                                         }
                                     </div>
                                 </div>
                                 
-                                <button class="btn btn-outline-primary me-2" type="button" @onclick="CopyRecoveryCodesToClipboard">Copy All Codes</button>
-                                <button class="btn btn-outline-primary me-2" type="button" @onclick="DownloadRecoveryCodes">Download Codes</button>
+                                <div class="flex gap-3">
+                                    <button class="btn-secondary" type="button" @onclick="CopyRegeneratedCodesToClipboard">Copy All Codes</button>
+                                    <button class="btn-secondary" type="button" @onclick="DownloadRegeneratedCodes">Download Codes</button>
+                                    <button class="btn-secondary" type="button" @onclick="CloseRegenerateCodes">Close</button>
+                                </div>
                             }
-                            
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="confirm-saved" @bind="_confirmSavedCodes" />
-                                <label class="form-check-label" for="confirm-saved">
-                                    I have saved my recovery codes in a safe place
-                                </label>
-                            </div>
-                            
-                            <button class="btn btn-success" type="button" @onclick="FinishTwoFactorSetup" disabled="@(!_confirmSavedCodes)">
-                                Finish Setup
-                            </button>
-                        }
+                            else
+                            {
+                                <div class="flex gap-3">
+                                    <button class="px-6 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors" type="button" @onclick="RegenerateRecoveryCodes">Generate New Codes</button>
+                                    <button class="btn-secondary" type="button" @onclick="CloseRegenerateCodes">Cancel</button>
+                                </div>
+                            }
+                        </div>
                     }
-                    else
+                    
+                    @if (_showDisable2FA)
                     {
-                        <div class="alert alert-success">
-                            <strong>Two-factor authentication is enabled</strong> - Your account is protected with an additional security layer.
-                        </div>
-                        
-                        <div class="mb-3">
-                            <button class="btn btn-primary me-2" type="button" @onclick="ShowRegenerateRecoveryCodes">Regenerate Recovery Codes</button>
-                            <button class="btn btn-danger" type="button" @onclick="ShowDisableTwoFactor">Disable Two-Factor Authentication</button>
-                        </div>
-                        
-                        @if (_showRegenerateCodes)
-                        {
-                            <div class="card border-warning mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title">Regenerate Recovery Codes</h6>
-                                    <p class="card-text">This will generate new recovery codes and invalidate your old ones. Make sure to save the new codes.</p>
-                                    
-                                    @if (_regeneratedCodes != null && _regeneratedCodes.Any())
-                                    {
-                                        <div class="alert alert-warning">
-                                            <strong>Your new recovery codes:</strong>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <div class="border rounded p-3 bg-light font-monospace" style="column-count: 2; column-gap: 20px;">
-                                                @foreach (var recoveryCode in _regeneratedCodes)
-                                                {
-                                                    <div class="mb-1">@recoveryCode</div>
-                                                }
-                                            </div>
-                                        </div>
-                                        
-                                        <button class="btn btn-outline-primary me-2" type="button" @onclick="CopyRegeneratedCodesToClipboard">Copy All Codes</button>
-                                        <button class="btn btn-outline-primary me-2" type="button" @onclick="DownloadRegeneratedCodes">Download Codes</button>
-                                        <button class="btn btn-secondary" type="button" @onclick="CloseRegenerateCodes">Close</button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-warning me-2" type="button" @onclick="RegenerateRecoveryCodes">Generate New Codes</button>
-                                        <button class="btn btn-secondary" type="button" @onclick="CloseRegenerateCodes">Cancel</button>
-                                    }
+                        <div class="card-cute border-2 border-red-300">
+                            <h5 class="text-lg font-semibold text-red-600 mb-2">Disable Two-Factor Authentication</h5>
+                            <p class="text-gray-700 mb-4">This will remove the additional security layer from your account.</p>
+                            
+                            <EditForm Model="DisableModel" OnValidSubmit="DisableTwoFactorAsync" class="space-y-4">
+                                <DataAnnotationsValidator/>
+                                <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
+                                
+                                @if (!string.IsNullOrEmpty(_disable2FAError))
+                                {
+                                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">@_disable2FAError</div>
+                                }
+                                
+                                <div>
+                                    <label for="disable-password" class="block text-sm font-medium text-gray-700 mb-2">Enter your password to confirm</label>
+                                    <InputText id="disable-password" type="password" class="input-cute" @bind-Value="DisableModel.Password"/>
                                 </div>
-                            </div>
-                        }
-                        
-                        @if (_showDisable2FA)
-                        {
-                            <div class="card border-danger mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title text-danger">Disable Two-Factor Authentication</h6>
-                                    <p class="card-text">This will remove the additional security layer from your account.</p>
-                                    
-                                    <EditForm Model="DisableModel" OnValidSubmit="DisableTwoFactorAsync">
-                                        <DataAnnotationsValidator/>
-                                        <ValidationSummary/>
-                                        
-                                        @if (!string.IsNullOrEmpty(_disable2FAError))
-                                        {
-                                            <div class="alert alert-danger">@_disable2FAError</div>
-                                        }
-                                        
-                                        <div class="mb-3">
-                                            <label for="disable-password" class="form-label">Enter your password to confirm</label>
-                                            <InputText id="disable-password" type="password" class="form-control" @bind-Value="DisableModel.Password"/>
-                                        </div>
-                                        
-                                        <button class="btn btn-danger me-2" type="submit">Yes, Disable 2FA</button>
-                                        <button class="btn btn-secondary" type="button" @onclick="CancelDisable2FA">Cancel</button>
-                                    </EditForm>
+                                
+                                <div class="flex gap-3">
+                                    <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Disable 2FA</button>
+                                    <button class="btn-secondary" type="button" @onclick="CancelDisable2FA">Cancel</button>
                                 </div>
-                            </div>
-                        }
+                            </EditForm>
+                        </div>
                     }
-                </div>
+                }
             </div>
             
             <!-- Delete Account Section -->
-            <div class="card border-danger">
-                <div class="card-body">
-                    <h5 class="card-title text-danger">Delete Account</h5>
-                    <p class="card-text">Once you delete your account, there is no going back. Please be certain.</p>
-                    
-                    @if (_deletingAccount)
-                    {
-                        <div class="alert alert-info">
-                            <strong>Deleting account...</strong> Please wait.
+            <div class="card-cute border-2 border-red-300">
+                <h4 class="text-xl font-semibold text-red-600 mb-2">Delete Account</h4>
+                <p class="text-gray-700 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+                
+                @if (_deletingAccount)
+                {
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
+                        <strong>Deleting account...</strong> Please wait.
+                    </div>
+                }
+                else if (!_showDeleteConfirmation)
+                {
+                    <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="button" @onclick="ShowDeleteConfirmation">Delete Account</button>
+                }
+                else
+                {
+                    <EditForm Model="DeleteModel" OnValidSubmit="DeleteAccountAsync" class="space-y-4">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
+                        
+                        @if (!string.IsNullOrEmpty(_deleteError))
+                        {
+                            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">@_deleteError</div>
+                        }
+                        
+                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+                            <strong>Warning:</strong> This action cannot be undone. All your data including your profile, links, and images will be permanently deleted.
                         </div>
-                    }
-                    else if (!_showDeleteConfirmation)
-                    {
-                        <button class="btn btn-danger" type="button" @onclick="ShowDeleteConfirmation">Delete Account</button>
-                    }
-                    else
-                    {
-                        <EditForm Model="DeleteModel" OnValidSubmit="DeleteAccountAsync">
-                            <DataAnnotationsValidator/>
-                            <ValidationSummary/>
-                            
-                            @if (!string.IsNullOrEmpty(_deleteError))
-                            {
-                                <div class="alert alert-danger">@_deleteError</div>
-                            }
-                            
-                            <div class="alert alert-warning">
-                                <strong>Warning:</strong> This action cannot be undone. All your data including your profile, links, and images will be permanently deleted.
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="delete-password" class="form-label">Enter your password to confirm</label>
-                                <InputText id="delete-password" type="password" class="form-control" @bind-Value="DeleteModel.Password"/>
-                            </div>
-                            
-                            <button class="btn btn-danger me-2" type="submit">Yes, Delete My Account</button>
-                            <button class="btn btn-secondary" type="button" @onclick="CancelDelete">Cancel</button>
-                        </EditForm>
-                    }
-                </div>
+                        
+                        <div>
+                            <label for="delete-password" class="block text-sm font-medium text-gray-700 mb-2">Enter your password to confirm</label>
+                            <InputText id="delete-password" type="password" class="input-cute" @bind-Value="DeleteModel.Password"/>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Delete My Account</button>
+                            <button class="btn-secondary" type="button" @onclick="CancelDelete">Cancel</button>
+                        </div>
+                    </EditForm>
+                }
             </div>
         }
     </Authorized>

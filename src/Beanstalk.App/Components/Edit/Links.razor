@@ -4,6 +4,7 @@
 @using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
+@using System.Text.RegularExpressions
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
@@ -14,50 +15,145 @@
         <Authorized>
             @if (_loading)
             {
-                <p>Loading...</p>
+                <p class="text-center text-gray-600 text-lg py-12">Loading links...</p>
             }
             else if (_profile is null || _user is null)
             {
-                <p>Profile not found.</p>
+                <div class="card-cute text-center py-12">
+                    <p class="text-gray-600">Profile not found.</p>
+                </div>
             }
             else
             {
-                <h3>Links</h3>
-                <button class="btn btn-primary mb-3" @onclick="AddLink">Add Link</button>
-                @foreach (var link in _links)
-                {
-                    <div class="card mb-2 p-3">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-1 text-center">
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="(() => MoveUp(link))">↑
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary mt-1" @onclick="(() => MoveDown(link))">
-                                    ↓
-                                </button>
-                            </div>
-                            <div class="col">
-                                <InputText class="form-control" @bind-Value="link.Title" placeholder="Title"/>
-                            </div>
-                            <div class="col">
-                                <InputText class="form-control" @bind-Value="link.Url" placeholder="Url"/>
-                            </div>
-                            <div class="col-2 form-check">
-                                <input class="form-check-input" type="checkbox" @bind="link.IsVisible" id="v@link.Id"/>
-                                <label class="form-check-label" for="v@link.Id">Visible</label>
-                            </div>
-                            <div class="col-2 text-end">
-                                <button class="btn btn-sm btn-danger" @onclick="(() => RemoveLink(link))">Remove
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
+                <h3 class="text-3xl font-bold mb-4 text-gray-900">Links</h3>
+                <p class="text-gray-600 mb-8">Add and organize links for your profile page.</p>
 
-                <button class="btn btn-success" @onclick="SaveAsync">Save Changes</button>
-                @if (_saved)
-                {
-                    <span class="ms-2">Saved.</span>
-                }
+                <div class="space-y-6">
+                    <div class="mb-6">
+                        <button class="btn-primary" @onclick="AddLink" disabled="@(_links.Count >= 20)">
+                            Add New Link
+                        </button>
+                    </div>
+
+                    <!-- Links List -->
+                    @if (_links.Count == 0)
+                    {
+                        <div class="card-cute text-center py-16 bg-gray-50">
+                            <h4 class="text-2xl font-semibold text-gray-800 mb-2">No Links Yet</h4>
+                            <p class="text-gray-600 mb-6">Add links to your social media, portfolio, or any other pages you want to share!</p>
+                            <button class="btn-primary" @onclick="AddLink">
+                                Add Your First Link
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            @foreach (var link in _links)
+                            {
+                                var index = _links.IndexOf(link);
+                                var isValidUrl = !string.IsNullOrWhiteSpace(link.Url) && Uri.TryCreate(link.Url, UriKind.Absolute, out _);
+                                
+                                <div class="card-cute @(link.IsVisible ? "" : "opacity-60")">
+                                    <div class="flex items-start gap-4">
+                                        <!-- Drag Handle -->
+                                        <div class="flex flex-col gap-2 pt-2">
+                                            <button class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
+                                                    @onclick="(() => MoveUp(link))" 
+                                                    disabled="@(index == 0)"
+                                                    title="Move up">
+                                                <span class="text-xl">⬆️</span>
+                                            </button>
+                                            <button class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
+                                                    @onclick="(() => MoveDown(link))" 
+                                                    disabled="@(index == _links.Count - 1)"
+                                                    title="Move down">
+                                                <span class="text-xl">⬇️</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Link Preview & Form -->
+                                        <div class="flex-1 space-y-4">
+                                            <!-- Preview Card -->
+                                            @if (isValidUrl && !string.IsNullOrWhiteSpace(link.Title))
+                                            {
+                                                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                                                    <div class="text-xs text-gray-500 mb-2 uppercase tracking-wide">Preview</div>
+                                                    <a href="@link.Url" target="_blank" rel="noopener" 
+                                                       class="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                                                        <span class="font-semibold text-gray-800">@link.Title</span>
+                                                        <span class="text-gray-400">→</span>
+                                                    </a>
+                                                </div>
+                                            }
+
+                                            <!-- Form Fields -->
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                        Link Title
+                                                    </label>
+                                                    <InputText class="input-cute" 
+                                                               @bind-Value="link.Title" 
+                                                               placeholder="e.g., My Portfolio" />
+                                                    @if (string.IsNullOrWhiteSpace(link.Title))
+                                                    {
+                                                        <p class="text-xs text-gray-500 mt-1">Give your link a friendly name</p>
+                                                    }
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                        URL
+                                                    </label>
+                                                    <InputText class="@GetUrlInputClass(link)" 
+                                                               @bind-Value="link.Url" 
+                                                               placeholder="https://example.com" />
+                                                    @if (!string.IsNullOrWhiteSpace(link.Url) && !isValidUrl)
+                                                    {
+                                                        <p class="text-xs text-red-500 mt-1">Please enter a valid URL</p>
+                                                    }
+                                                    else if (string.IsNullOrWhiteSpace(link.Url))
+                                                    {
+                                                        <p class="text-xs text-gray-500 mt-1">Include https:// or http://</p>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <!-- Options -->
+                                            <div class="flex items-center justify-between pt-2 border-t border-gray-200">
+                                                <div class="flex items-center gap-3">
+                                                    <label class="flex items-center gap-2 cursor-pointer">
+                                                        <input type="checkbox" 
+                                                               class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" 
+                                                               @bind="link.IsVisible" />
+                                                        <span class="text-sm font-medium text-gray-700">
+                                                            @(link.IsVisible ? "Visible" : "Hidden")
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                                <button class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors text-sm" 
+                                                        @onclick="(() => RemoveLink(link))">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex items-center gap-4">
+                            <button class="btn-primary" @onclick="SaveAsync">
+                                Save Changes
+                            </button>
+                            @if (_saved)
+                            {
+                                <span class="text-green-600 font-medium">Links saved successfully!</span>
+                            }
+                        </div>
+                    }
+                </div>
             }
         </Authorized>
         <NotAuthorized>
@@ -100,11 +196,14 @@
     {
         var maxOrder = _links.Count == 0 ? 0 : _links.Max(l => l.SortOrder) + 1;
         _links.Add(new ProfileLink { Id = Guid.NewGuid(), Title = "New Link", Url = "https://", SortOrder = maxOrder, IsVisible = true });
+        _saved = false;
     }
 
     private void RemoveLink(ProfileLink link)
     {
         _links.Remove(link);
+        Reindex();
+        _saved = false;
     }
 
     private void MoveUp(ProfileLink link)
@@ -115,6 +214,7 @@
             _links.RemoveAt(index);
             _links.Insert(index - 1, link);
             Reindex();
+            _saved = false;
         }
     }
 
@@ -126,6 +226,7 @@
             _links.RemoveAt(index);
             _links.Insert(index + 1, link);
             Reindex();
+            _saved = false;
         }
     }
 
@@ -175,8 +276,16 @@
 
         await db.SaveChangesAsync();
         _saved = true;
+        StateHasChanged();
     }
 
+    private string GetUrlInputClass(ProfileLink link)
+    {
+        var baseClass = "input-cute";
+        if (!string.IsNullOrWhiteSpace(link.Url) && !Uri.TryCreate(link.Url, UriKind.Absolute, out _))
+        {
+            return $"{baseClass} border-red-300";
+        }
+        return baseClass;
+    }
 }
-
-

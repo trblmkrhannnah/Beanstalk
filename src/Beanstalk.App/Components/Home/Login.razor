@@ -5,27 +5,29 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager Nav
 
-<h3>Login</h3>
+<div class="card-cute max-w-md mx-auto">
+    <h3 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-pink-500 to-lavender-500 bg-clip-text text-transparent">✨ Login</h3>
 
-<EditForm Model="Model" OnValidSubmit="LoginAsync" FormName="login" method="post">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-    @if (!string.IsNullOrEmpty(_error))
-    {
-        <div class="alert alert-danger" role="alert">
-            @_error
+    <EditForm Model="Model" OnValidSubmit="LoginAsync" FormName="login" method="post" class="space-y-4">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700" />
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700" role="alert">
+                @_error
+            </div>
+        }
+        <div class="mb-4">
+            <label for="login-username" class="block text-sm font-medium text-gray-700 mb-2">👤 Username</label>
+            <InputText id="login-username" class="input-cute" @bind-Value="Model.Username" />
         </div>
-    }
-    <div class="mb-3">
-        <label for="login-username">Username</label>
-        <InputText id="login-username" class="form-control" @bind-Value="Model.Username" />
-    </div>
-    <div class="mb-3">
-        <label for="login-password">Password</label>
-        <InputText id="login-password" class="form-control" @bind-Value="Model.Password" type="password" />
-    </div>
-    <button class="btn btn-primary" type="submit">Login</button>
-</EditForm>
+        <div class="mb-4">
+            <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">🔒 Password</label>
+            <InputText id="login-password" class="input-cute" @bind-Value="Model.Password" type="password" />
+        </div>
+        <button class="btn-primary w-full" type="submit">🚀 Login</button>
+    </EditForm>
+</div>
 
 @code {
     [SupplyParameterFromForm]

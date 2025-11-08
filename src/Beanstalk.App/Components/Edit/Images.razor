@@ -4,7 +4,6 @@
 @using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
-
 @using Microsoft.Extensions.DependencyInjection
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthStateProvider
@@ -16,98 +15,165 @@
         <Authorized>
             @if (_loading)
             {
-                <p>Loading...</p>
+                <p class="text-center text-gray-600 text-lg py-12">Loading images...</p>
             }
             else if (_profile is null)
             {
-                <p>Profile not found.</p>
+                <div class="card-cute text-center py-12">
+                    <p class="text-gray-600">Profile not found.</p>
+                </div>
             }
             else
             {
-            <h3>Profile Images</h3>
-            <p class="text-muted">@_images.Count of @_maxImages images</p>
+                <h3 class="text-3xl font-bold mb-4 text-gray-900">Images</h3>
+                <p class="text-gray-600 mb-8">Manage your profile images.</p>
 
-            <button class="btn btn-primary mb-3" @onclick="ShowUploadModal" disabled="@(_images.Count >= _maxImages)">
-                Upload New Image
-            </button>
+                <div class="space-y-6">
+                    <div class="mb-6">
+                        <button class="btn-primary" @onclick="ShowUploadModal" disabled="@(_images.Count >= _maxImages)">
+                            Upload New Image
+                        </button>
+                    </div>
 
-            @if (_images.Count >= _maxImages)
-            {
-                <p class="text-warning">You have reached the maximum number of images allowed.</p>
-            }
+                    <!-- Stats Card -->
+                    <div class="card-cute mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-xl font-semibold text-gray-800">Image Storage</h4>
+                            <span class="text-gray-600">@_images.Count / @_maxImages</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" 
+                                 style="width: @((_images.Count / (double)_maxImages) * 100)%"></div>
+                        </div>
+                        @if (_images.Count >= _maxImages)
+                        {
+                            <p class="text-red-500 text-sm mt-3">You have reached the maximum number of images allowed. Please delete existing images to upload new ones.</p>
+                        }
+                    </div>
 
-            @if (_images.Count == 0)
-            {
-                <p>No images uploaded yet.</p>
-            }
-            else
-            {
-                <div class="row g-3">
-                    @foreach (var img in _images)
+                    <!-- Images Grid -->
+                    @if (_images.Count == 0)
                     {
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="card">
-                                <div class="position-relative">
-                                    <img src="/api/images/@img.Id" class="card-img-top" alt="Profile Image" style="aspect-ratio: 1; object-fit: cover; border-radius: 50%; padding: 1rem;" />
-                                    @if (_profile.SelectedImageId == img.Id)
-                                    {
-                                        <span class="badge bg-success position-absolute top-0 end-0 m-2">Default</span>
-                                    }
+                        <div class="card-cute text-center py-16 bg-gray-50">
+                            <h4 class="text-2xl font-semibold text-gray-800 mb-2">No Images Yet</h4>
+                            <p class="text-gray-600 mb-6">Upload your first profile image to get started!</p>
+                            <button class="btn-primary" @onclick="ShowUploadModal">
+                                Upload Your First Image
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            @foreach (var img in _images)
+                            {
+                                var isDefault = _profile.SelectedImageId == img.Id;
+                                <div class="group relative card-cute p-0 overflow-hidden @(isDefault ? "ring-2 ring-indigo-500" : "")">
+                                    <!-- Image -->
+                                    <div class="relative aspect-square bg-gray-100">
+                                        <img src="/api/images/@img.Id" 
+                                             alt="Profile Image" 
+                                             class="w-full h-full object-cover" />
+                                        
+                                        <!-- Default Badge -->
+                                        @if (isDefault)
+                                        {
+                                            <div class="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                                                <span>✓</span> Default
+                                            </div>
+                                        }
+                                        
+                                        <!-- Overlay on Hover -->
+                                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                                            @if (!isDefault)
+                                            {
+                                                <button class="px-4 py-2 bg-white text-gray-800 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm" 
+                                                        @onclick="(() => SetAsDefault(img.Id))">
+                                                    Set Default
+                                                </button>
+                                            }
+                                            <button class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors text-sm" 
+                                                    @onclick="(() => DeleteImage(img.Id))">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Image Info -->
+                                    <div class="p-3 bg-white">
+                                        <div class="text-xs text-gray-500">
+                                            @img.CreatedUtc.ToString("MMM dd, yyyy")
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="card-body text-center">
-                                    @if (_profile.SelectedImageId != img.Id)
-                                    {
-                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="(() => SetAsDefault(img.Id))">
-                                            Set as Default
-                                        </button>
-                                    }
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteImage(img.Id))">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
+                            }
                         </div>
                     }
                 </div>
             }
-        }
 
-        @if (_showUploadModal)
-        {
-            <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Upload Profile Image</h5>
-                            <button type="button" class="btn-close" @onclick="CloseUploadModal"></button>
+            <!-- Upload Modal -->
+            @if (_showUploadModal)
+            {
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @onclick="CloseUploadModal">
+                    <div class="card-cute max-w-2xl w-full max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-2xl font-semibold text-gray-800">Upload Profile Image</h4>
+                            <button class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" 
+                                    @onclick="CloseUploadModal">
+                                ×
+                            </button>
                         </div>
-                        <div class="modal-body">
-                            @if (_uploadError != null)
-                            {
-                                <div class="alert alert-danger">@_uploadError</div>
-                            }
-                            
+
+                        @if (_uploadError != null)
+                        {
+                            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                                @_uploadError
+                            </div>
+                        }
+
+                        <div class="space-y-4">
                             <div>
-                                <label for="imageFile" class="form-label">Select an image (max 10MB)</label>
-                                <input type="file" id="imageFile" class="form-control" accept="image/jpeg,image/png,image/webp" onchange="handleImageFileSelected(this)" />
-                                <small class="text-muted">Supported formats: JPEG, PNG, WebP</small>
+                                <label for="imageFile" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Select an Image
+                                </label>
+                                <div class="relative">
+                                    <input type="file" 
+                                           id="imageFile" 
+                                           class="input-cute cursor-pointer" 
+                                           accept="image/jpeg,image/png,image/webp" 
+                                           onchange="handleImageFileSelected(this)" />
+                                </div>
+                                <small class="block mt-2 text-sm text-gray-500">
+                                    Supported formats: JPEG, PNG, WebP • Maximum size: 10MB
+                                </small>
                             </div>
-                            
-                            <div id="cropperContainer" style="max-height: 500px; overflow: hidden; display: none; margin-top: 1rem;">
-                                <p>Crop your image to a square (1024x1024px):</p>
-                                <img id="cropperImage" style="max-width: 100%;" />
+
+                            <div id="cropperContainer" 
+                                 class="hidden mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <p class="text-sm font-medium text-gray-700 mb-3">
+                                    Crop your image to a square (1024x1024px recommended):
+                                </p>
+                                <div class="relative bg-white rounded-lg overflow-hidden shadow-inner">
+                                    <img id="cropperImage" class="max-w-full" />
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseUploadModal">Cancel</button>
-                            <button type="button" id="saveUploadBtn" class="btn btn-primary" onclick="saveAndUploadImage()" style="display: none;">
+
+                        <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                            <button type="button" class="btn-secondary flex-1" @onclick="CloseUploadModal">
+                                Cancel
+                            </button>
+                            <button type="button" 
+                                    id="saveUploadBtn" 
+                                    class="btn-primary flex-1 hidden" 
+                                    onclick="saveAndUploadImage()">
                                 <span id="uploadBtnText">Save & Upload</span>
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        }
+            }
         </Authorized>
         <NotAuthorized>
             <PleaseLogIn />
@@ -193,7 +259,7 @@
 
     private async Task DeleteImage(Guid imageId)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this image?"))
+        if (!await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this image? This action cannot be undone."))
         {
             return;
         }
@@ -215,4 +281,3 @@
         }
     }
 }
-

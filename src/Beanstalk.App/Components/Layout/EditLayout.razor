@@ -4,103 +4,101 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <div>EDIT</div>
-        
-        <div class="top-row ps-3 navbar navbar-dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="">Beanstalk 🌱</a>
-            </div>
+<div class="relative flex flex-col md:flex-row h-screen overflow-hidden">
+    <div class="bg-gray-50 md:w-64 h-screen md:sticky md:top-0 border-r border-gray-300 flex flex-col">
+        <div class="px-4 py-4 flex-shrink-0">
+            <a class="text-lg font-semibold text-gray-900 hover:text-indigo-600 transition-colors" href="">🌱 Beanstalk</a>
         </div>
 
-        <input type="checkbox" title="Navigation menu" class="navbar-toggler"/>
+        <input type="checkbox" title="Navigation menu" id="edit-navbar-toggler" class="edit-navbar-toggler appearance-none cursor-pointer w-10 h-10 text-gray-600 absolute top-4 right-4 bg-white border border-gray-300 rounded-md bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 30 30%27%3e%3cpath stroke=%27%234b5563%27 stroke-linecap=%27round%27 stroke-miterlimit=%2710%27 stroke-width=%272%27 d=%27M4 7h22M4 15h22M4 23h22%27/%3e%3c/svg%3e')] bg-no-repeat bg-center bg-[length:1.25rem] hover:bg-gray-50 checked:bg-indigo-50 checked:border-indigo-300 md:hidden"/>
 
-        <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-            <nav class="nav flex-column">
+        <div class="edit-nav-scrollable hidden md:flex md:flex-col md:flex-1 md:overflow-y-auto py-4" onclick="document.getElementById('edit-navbar-toggler')?.click()">
+            <nav class="flex flex-col md:flex-1 px-3 space-y-1">
                 <AuthorizeView>
                     <Authorized>
                         @if (!string.IsNullOrEmpty(_username))
                         {
-                            <div class="nav-item px-3 profile-pill-container">
-                                <a class="nav-link profile-pill-button" href="/@_username" target="_blank" rel="noopener">
-                                    Open Profile <span class="bi bi-box-arrow-up-right-nav-menu" aria-hidden="true"></span>
-                                </a>
-                            </div>
+                            <a class="bg-indigo-600 text-white rounded-lg px-3 py-2 text-sm font-medium text-center transition-all duration-200 flex items-center justify-center gap-2 hover:bg-indigo-700 mb-4" href="/@_username" target="_blank" rel="noopener">
+                                View Profile
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
                         }
                     </Authorized>
                 </AuthorizeView>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/dashboard" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/preview" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Preview
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/appearance" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Appearance
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/images" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Images
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/links" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Links
-                    </NavLink>
-                </div>
+                
+                <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/dashboard" Match="NavLinkMatch.All">
+                    Dashboard
+                </NavLink>
+                <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/preview" Match="NavLinkMatch.All">
+                    Preview
+                </NavLink>
+                <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/appearance" Match="NavLinkMatch.All">
+                    Appearance
+                </NavLink>
+                <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/images" Match="NavLinkMatch.All">
+                    Images
+                </NavLink>
+                <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/links" Match="NavLinkMatch.All">
+                    Links
+                </NavLink>
+                
                 <AuthorizeView Roles="Admin">
                     <Authorized>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/edit/settings" Match="NavLinkMatch.All">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Settings
+                        <div class="pt-4 mt-4 border-t border-gray-200">
+                            <div class="text-xs text-gray-500 px-3 py-1.5 uppercase tracking-wider font-semibold">Administration</div>
+                            <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200 mt-1" href="/edit/settings" Match="NavLinkMatch.All">
+                                Settings
                             </NavLink>
-                        </div>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/edit/invites" Match="NavLinkMatch.All">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Invites
+                            <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/invites" Match="NavLinkMatch.All">
+                                Invites
                             </NavLink>
-                        </div>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/edit/users" Match="NavLinkMatch.All">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Users
+                            <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/users" Match="NavLinkMatch.All">
+                                Users
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/edit/account" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Account
+                
+                <div class="pt-4 mt-4 border-t border-gray-200">
+                    <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-indigo-50 hover:text-indigo-700 hover:font-semibold data-[active=true]:bg-indigo-50 data-[active=true]:text-indigo-700 data-[active=true]:font-semibold transition-all duration-200" href="/edit/account" Match="NavLinkMatch.All">
+                        Account
+                    </NavLink>
+                    <NavLink class="text-gray-700 rounded-md px-3 py-2 text-sm font-medium flex items-center hover:bg-red-50 hover:text-red-700 hover:font-semibold transition-all duration-200" href="/home/logout" Match="NavLinkMatch.All">
+                        Logout
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/home/logout" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Logout
-                    </NavLink>
-                </div>
-
             </nav>
         </div>
     </div>
 
-    <main>
-        <article class="content px-4">
+    <main class="flex-1 overflow-y-auto">
+        <article class="content px-6 md:px-8 lg:px-12 py-8 md:py-12">
             @Body
         </article>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+<div id="blazor-error-ui" class="hidden fixed bottom-0 left-0 w-full bg-yellow-200 shadow-lg p-4 z-[1000] border-t border-yellow-300" data-nosnippet>
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <span>An unhandled error has occurred.</span>
+        <div class="flex gap-4">
+            <a href="." class="text-blue-600 hover:text-blue-800 underline">Reload</a>
+            <button onclick="document.getElementById('blazor-error-ui').classList.add('hidden')" class="cursor-pointer text-gray-600 hover:text-gray-800">🗙</button>
+        </div>
+    </div>
 </div>
+
+<style>
+    .edit-navbar-toggler:checked ~ .edit-nav-scrollable {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        max-height: calc(100vh - 7rem);
+    }
+</style>
 
 <AntiforgeryToken />
 

@@ -1,26 +1,30 @@
 @inherits LayoutComponentBase
 
-<div class="page">
+<div class="relative flex flex-col min-h-screen">
     <PageTitle>Beanstalk</PageTitle>
-    <main>
-        <article class="content px-4">
-            <div class="container py-5 col-sm-6 col-md-4 col-lg-3">
-                <div class="d-flex align-items-center justify-content-center gap-3">
-                    <img src="Beanstalk.svg" alt="Beanstalk Logo" style="height: 3rem; width: 3rem;" />
-                    <h1 class="display-4 mb-0">Beanstalk</h1>
+    <main class="flex-1">
+        <article class="content px-6 md:px-8 lg:px-12 py-8 md:py-12">
+            <div class="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto py-12">
+                <div class="flex items-center justify-center gap-3 mb-8">
+                    <img src="Beanstalk.svg" alt="Beanstalk Logo" class="h-16 w-16 drop-shadow-lg" />
+                    <h1 class="text-5xl font-bold mb-0 bg-gradient-to-r from-pink-500 to-lavender-500 bg-clip-text text-transparent">Beanstalk</h1>
                 </div>
             </div>
-            <div class="container py-5 col-sm-6 col-md-4 col-lg-3">
+            <div class="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto py-12">
                 @Body
             </div>
         </article>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+<div id="blazor-error-ui" class="hidden fixed bottom-0 left-0 w-full bg-yellow-200 shadow-lg p-4 z-[1000] border-t border-yellow-300" data-nosnippet>
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <span>An unhandled error has occurred.</span>
+        <div class="flex gap-4">
+            <a href="." class="text-blue-600 hover:text-blue-800 underline">Reload</a>
+            <button onclick="document.getElementById('blazor-error-ui').classList.add('hidden')" class="cursor-pointer text-gray-600 hover:text-gray-800">🗙</button>
+        </div>
+    </div>
 </div>
 
 <AntiforgeryToken/>
