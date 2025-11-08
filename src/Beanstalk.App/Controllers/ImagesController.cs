@@ -7,18 +7,21 @@ using Beanstalk.Database.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using DbImage = Beanstalk.Database.Entities.Image;
 
 namespace Beanstalk.App.Controllers;
 
 [ApiController]
-[Route("api/profile-images")]
-public class ProfileImagesController : ControllerBase
+[Route("api/images")]
+public class ImagesController : ControllerBase
 {
     private readonly BeanstalkConfig _config;
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ProfileImagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, BeanstalkConfig config)
+    public ImagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, BeanstalkConfig config)
     {
         _db = db;
         _userManager = userManager;
@@ -26,19 +29,49 @@ public class ProfileImagesController : ControllerBase
     }
 
     /// <summary>
-    ///     GET /api/profile-images/{id} - Serve image from database
+    ///     GET /api/images/{id} - Serve full resolution image from database
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetImage(Guid id)
     {
-        var image = await _db.ProfileImages.FindAsync(id);
+        var image = await _db.Images.FindAsync(id);
         if (image == null) return NotFound();
 
         return File(image.ImageData, image.ContentType);
     }
 
     /// <summary>
-    ///     POST /api/profile-images/upload - Upload cropped image
+    ///     GET /api/images/{id}/thumbnail - Serve thumbnail image from database
+    /// </summary>
+    [HttpGet("{id:guid}/thumbnail")]
+    public async Task<IActionResult> GetImageThumbnail(Guid id)
+    {
+        var image = await _db.Images.FindAsync(id);
+        if (image == null) return NotFound();
+
+        // Check if thumbnail exists, if not generate it (for legacy images)
+        if (image.ThumbnailData == null || image.ThumbnailData.Length == 0)
+        {
+            // Generate thumbnail from full image
+            using var inputStream = new MemoryStream(image.ImageData);
+            using var outputStream = new MemoryStream();
+            using var img = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
+            
+            img.Mutate(x => x.Resize(128, 128));
+            await img.SaveAsync(outputStream, new JpegEncoder { Quality = 85 });
+            
+            image.ThumbnailData = outputStream.ToArray();
+            
+            // Save the generated thumbnail to database
+            _db.Images.Update(image);
+            await _db.SaveChangesAsync();
+        }
+
+        return File(image.ThumbnailData, image.ContentType);
+    }
+
+    /// <summary>
+    ///     POST /api/images/upload - Upload cropped image
     /// </summary>
     [HttpPost("upload")]
     public async Task<IActionResult> UploadImage()
@@ -83,22 +116,34 @@ public class ProfileImagesController : ControllerBase
         if (contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/webp")
             return BadRequest(new { error = "Unsupported image type. Use JPEG, PNG, or WebP." });
 
-        // Read image data
-        await using var memoryStream = new MemoryStream();
-        await file.CopyToAsync(memoryStream);
-        var imageData = memoryStream.ToArray();
+        // Read and process image data
+        await using var uploadStream = new MemoryStream();
+        await file.CopyToAsync(uploadStream);
+        var imageData = uploadStream.ToArray();
+
+        // Generate thumbnail
+        byte[] thumbnailData;
+        using (var inputStream = new MemoryStream(imageData))
+        using (var outputStream = new MemoryStream())
+        {
+            using var img = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
+            img.Mutate(x => x.Resize(128, 128));
+            await img.SaveAsync(outputStream, new JpegEncoder { Quality = 85 });
+            thumbnailData = outputStream.ToArray();
+        }
 
         var imageId = Guid.NewGuid();
-        var stored = new ProfileImage
+        var stored = new DbImage
         {
             Id = imageId,
             ProfileId = profile.Id,
             ImageData = imageData,
+            ThumbnailData = thumbnailData,
             ContentType = contentType,
             CreatedUtc = DateTime.UtcNow
         };
 
-        _db.ProfileImages.Add(stored);
+        _db.Images.Add(stored);
 
         // Set as default if no default image exists
         if (!profile.SelectedImageId.HasValue)
@@ -106,11 +151,11 @@ public class ProfileImagesController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok(new { id = stored.Id, url = $"/api/profile-images/{stored.Id}" });
+        return Ok(new { id = stored.Id, url = $"/api/images/{stored.Id}" });
     }
 
     /// <summary>
-    ///     DELETE /api/profile-images/{id} - Delete image
+    ///     DELETE /api/images/{id} - Delete image
     /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteImage(Guid id)
@@ -128,7 +173,7 @@ public class ProfileImagesController : ControllerBase
         if (profile == null)
             return NotFound();
 
-        var image = await _db.ProfileImages.FindAsync(id);
+        var image = await _db.Images.FindAsync(id);
 
         if (image == null || image.ProfileId != profile.Id)
             return NotFound();
@@ -137,14 +182,14 @@ public class ProfileImagesController : ControllerBase
         if (profile.SelectedImageId == id)
             profile.SelectedImageId = null;
 
-        _db.ProfileImages.Remove(image);
+        _db.Images.Remove(image);
         await _db.SaveChangesAsync();
 
         return Ok(new { success = true });
     }
 
     /// <summary>
-    ///     POST /api/profile-images/{id}/set-default - Set as default profile image
+    ///     POST /api/images/{id}/set-default - Set as default profile image
     /// </summary>
     [HttpPost("{id:guid}/set-default")]
     public async Task<IActionResult> SetDefaultImage(Guid id)
@@ -162,7 +207,7 @@ public class ProfileImagesController : ControllerBase
         if (profile == null)
             return NotFound();
 
-        var image = await _db.ProfileImages.FindAsync(id);
+        var image = await _db.Images.FindAsync(id);
 
         if (image == null || image.ProfileId != profile.Id)
             return NotFound();
@@ -173,3 +218,4 @@ public class ProfileImagesController : ControllerBase
         return Ok(new { success = true });
     }
 }
+

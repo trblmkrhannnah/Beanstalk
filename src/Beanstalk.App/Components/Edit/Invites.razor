@@ -7,9 +7,10 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Cryptography
+@using Microsoft.Extensions.DependencyInjection
 
 @inject UserManager<ApplicationUser> UserManager
-@inject ApplicationDbContext Db
+@inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Nav
@@ -176,8 +177,11 @@
     {
         _loading = true;
         
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
         // Auto-delete expired invites that have auto-delete enabled
-        var expiredAutoDeleteInvites = await Db.InviteLinks
+        var expiredAutoDeleteInvites = await db.InviteLinks
             .Where(i => i.AutoDeleteWhenExpired && 
                        (!i.IsActive || 
                         (i.MaxUses.HasValue && i.CurrentUses >= i.MaxUses.Value) ||
@@ -186,11 +190,12 @@
         
         if (expiredAutoDeleteInvites.Any())
         {
-            Db.InviteLinks.RemoveRange(expiredAutoDeleteInvites);
-            await Db.SaveChangesAsync();
+            db.InviteLinks.RemoveRange(expiredAutoDeleteInvites);
+            await db.SaveChangesAsync();
         }
         
-        _invites = await Db.InviteLinks
+        _invites = await db.InviteLinks
+            .AsNoTracking()
             .Include(i => i.CreatedBy)
             .OrderByDescending(i => i.CreatedUtc)
             .ToListAsync();
@@ -249,8 +254,11 @@
             AutoDeleteWhenExpired = _newInviteAutoDelete
         };
 
-        Db.InviteLinks.Add(invite);
-        await Db.SaveChangesAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        db.InviteLinks.Add(invite);
+        await db.SaveChangesAsync();
 
         _message = "Invite link created successfully!";
         _messageIsError = false;
@@ -264,8 +272,16 @@
 
     private async Task ToggleActiveAsync(InviteLink invite)
     {
-        invite.IsActive = !invite.IsActive;
-        await Db.SaveChangesAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var inviteToUpdate = await db.InviteLinks.FindAsync(invite.Id);
+        if (inviteToUpdate != null)
+        {
+            inviteToUpdate.IsActive = !inviteToUpdate.IsActive;
+            await db.SaveChangesAsync();
+            invite.IsActive = inviteToUpdate.IsActive;
+        }
         
         _message = $"Invite link {(invite.IsActive ? "activated" : "deactivated")}.";
         _messageIsError = false;
@@ -273,8 +289,16 @@
 
     private async Task ToggleAutoDeleteAsync(InviteLink invite)
     {
-        invite.AutoDeleteWhenExpired = !invite.AutoDeleteWhenExpired;
-        await Db.SaveChangesAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var inviteToUpdate = await db.InviteLinks.FindAsync(invite.Id);
+        if (inviteToUpdate != null)
+        {
+            inviteToUpdate.AutoDeleteWhenExpired = !inviteToUpdate.AutoDeleteWhenExpired;
+            await db.SaveChangesAsync();
+            invite.AutoDeleteWhenExpired = inviteToUpdate.AutoDeleteWhenExpired;
+        }
         
         _message = $"Auto-delete {(invite.AutoDeleteWhenExpired ? "enabled" : "disabled")} for invite link.";
         _messageIsError = false;
@@ -290,8 +314,15 @@
             return;
         }
 
-        Db.InviteLinks.Remove(invite);
-        await Db.SaveChangesAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var inviteToDelete = await db.InviteLinks.FindAsync(invite.Id);
+        if (inviteToDelete != null)
+        {
+            db.InviteLinks.Remove(inviteToDelete);
+            await db.SaveChangesAsync();
+        }
         
         _message = "Invite link deleted.";
         _messageIsError = false;

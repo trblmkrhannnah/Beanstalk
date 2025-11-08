@@ -3,11 +3,8 @@
 
 @using Beanstalk.App.Components.Common
 @using Beanstalk.App.Features
-@using Beanstalk.Database.Data
-@using Beanstalk.Database.Entities
 
 @inject BeanstalkConfig Config
-@inject ApplicationDbContext Db
 
 <CascadingAuthenticationState>
     <AuthorizeView Roles="Admin">

@@ -25,9 +25,9 @@ public class UserProfile
 
     public ThemePalette? ThemePalette { get; set; }
 
-    public ProfileImage? SelectedImage { get; set; }
+    public Image? SelectedImage { get; set; }
 
-    public List<ProfileImage> Images { get; set; } = new();
+    public List<Image> Images { get; set; } = new();
 
     public List<ProfileLink> Links { get; set; } = new();
 }

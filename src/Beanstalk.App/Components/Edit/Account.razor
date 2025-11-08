@@ -8,7 +8,8 @@
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 @using QRCoder
-@inject ApplicationDbContext Db
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject AuthenticationStateProvider AuthStateProvider
@@ -388,22 +389,25 @@
         IdentityResult deleteResult;
         try
         {
-            var profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            using var scope = ScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
             if (profile != null)
             {
                 // Delete profile links
-                var links = await Db.ProfileLinks.Where(l => l.ProfileId == profile.Id).ToListAsync();
-                Db.ProfileLinks.RemoveRange(links);
+                var links = await db.ProfileLinks.Where(l => l.ProfileId == profile.Id).ToListAsync();
+                db.ProfileLinks.RemoveRange(links);
 
                 // Delete profile images
-                var images = await Db.ProfileImages.Where(i => i.ProfileId == profile.Id).ToListAsync();
-                Db.ProfileImages.RemoveRange(images);
+                var images = await db.Images.Where(i => i.ProfileId == profile.Id).ToListAsync();
+                db.Images.RemoveRange(images);
 
                 // Delete profile
-                Db.UserProfiles.Remove(profile);
+                db.UserProfiles.Remove(profile);
             }
 
-            await Db.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             // Delete the user account
             deleteResult = await UserManager.DeleteAsync(_user);

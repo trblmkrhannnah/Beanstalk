@@ -7,7 +7,8 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
-@inject ApplicationDbContext Db
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -87,7 +88,10 @@
         _user = await UserManager.GetUserAsync(state.User);
         if (_user != null)
         {
-            _profile = await Db.UserProfiles
+            using var scope = ScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            _profile = await db.UserProfiles
                 .Include(p => p.ThemePalette)
                 .FirstOrDefaultAsync(p => p.UserId == _user.Id);
 
@@ -100,14 +104,15 @@
                     UserId = _user.Id,
                     CreatedUtc = DateTime.UtcNow
                 };
-                Db.UserProfiles.Add(_profile);
-                await Db.SaveChangesAsync();
+                db.UserProfiles.Add(_profile);
+                await db.SaveChangesAsync();
             }
 
             _selectedPaletteId = _profile.ThemePaletteId;
+            
+            _palettes = await db.ThemePalettes.AsNoTracking().OrderBy(p => p.Name).ToListAsync();
         }
 
-        _palettes = await Db.ThemePalettes.OrderBy(p => p.Name).ToListAsync();
         _loading = false;
     }
 
@@ -122,8 +127,16 @@
     {
         if (_profile == null) return;
 
-        _profile.ThemePaletteId = _selectedPaletteId;
-        await Db.SaveChangesAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var profileToUpdate = await db.UserProfiles.FindAsync(_profile.Id);
+        if (profileToUpdate != null)
+        {
+            profileToUpdate.ThemePaletteId = _selectedPaletteId;
+            await db.SaveChangesAsync();
+        }
+        
         _saved = true;
         StateHasChanged();
     }

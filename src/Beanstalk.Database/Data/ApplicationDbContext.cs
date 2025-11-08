@@ -14,7 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     }
 
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
-    public DbSet<ProfileImage> ProfileImages => Set<ProfileImage>();
+    public DbSet<Image> Images => Set<Image>();
     public DbSet<ProfileLink> ProfileLinks => Set<ProfileLink>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
     public DbSet<ThemePalette> ThemePalettes => Set<ThemePalette>();
@@ -49,10 +49,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        builder.Entity<ProfileImage>(entity =>
+        builder.Entity<Image>(entity =>
         {
             entity.HasKey(i => i.Id);
             entity.Property(i => i.ImageData).IsRequired();
+            entity.Property(i => i.ThumbnailData).IsRequired(false);
             entity.Property(i => i.ContentType).IsRequired();
             entity.Property(i => i.CreatedUtc)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");

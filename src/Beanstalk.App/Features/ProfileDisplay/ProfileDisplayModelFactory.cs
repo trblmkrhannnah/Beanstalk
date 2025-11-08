@@ -56,7 +56,7 @@ public sealed class ProfileDisplayModelFactory
                     ContainerForeground = contextPalette.ContainerForeground
                 }
                 : new ProfileDisplayThemeModel(),
-            ImageUrl = contextProfile.SelectedImageId.HasValue ? $"/api/profile-images/{contextProfile.SelectedImageId}" : null,
+            ImageUrl = contextProfile.SelectedImageId.HasValue ? $"/api/images/{contextProfile.SelectedImageId}" : null,
             Links = links
         };
     }

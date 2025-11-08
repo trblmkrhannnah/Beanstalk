@@ -49,7 +49,7 @@
                         <div class="col-6 col-md-4 col-lg-3">
                             <div class="card">
                                 <div class="position-relative">
-                                    <img src="/api/profile-images/@img.Id" class="card-img-top" alt="Profile Image" style="aspect-ratio: 1; object-fit: cover; border-radius: 50%; padding: 1rem;" />
+                                    <img src="/api/images/@img.Id" class="card-img-top" alt="Profile Image" style="aspect-ratio: 1; object-fit: cover; border-radius: 50%; padding: 1rem;" />
                                     @if (_profile.SelectedImageId == img.Id)
                                     {
                                         <span class="badge bg-success position-absolute top-0 end-0 m-2">Default</span>
@@ -119,7 +119,7 @@
 @code {
     private ApplicationUser? _user;
     private UserProfile? _profile;
-    private List<ProfileImage> _images = new();
+    private List<Image> _images = new();
     private bool _loading = true;
     private int _maxImages = 10;
     
@@ -175,7 +175,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("fetch", $"/api/profile-images/{imageId}/set-default", new
+            await JS.InvokeVoidAsync("fetch", $"/api/images/{imageId}/set-default", new
             {
                 method = "POST",
                 credentials = "include"
@@ -199,7 +199,7 @@
 
         try
         {
-            await JS.InvokeVoidAsync("fetch", $"/api/profile-images/{imageId}", new
+            await JS.InvokeVoidAsync("fetch", $"/api/images/{imageId}", new
             {
                 method = "DELETE",
                 credentials = "include"

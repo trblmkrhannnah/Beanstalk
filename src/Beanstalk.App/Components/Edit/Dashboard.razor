@@ -4,7 +4,9 @@
 @using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
-@inject ApplicationDbContext Db
+
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -65,7 +67,10 @@
 
         if (_user != null)
         {
-            _profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            using var scope = ScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
 
             if (Model == null)
             {
@@ -88,15 +93,22 @@
         _user.IsEnabled = Model.UserEnabled;
         await UserManager.UpdateAsync(_user);
 
-        if (_profile == null)
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+        
+        if (profile == null)
         {
-            _profile = new UserProfile { Id = Guid.NewGuid(), UserId = _user.Id, CreatedUtc = DateTime.UtcNow };
-            Db.UserProfiles.Add(_profile);
+            profile = new UserProfile { Id = Guid.NewGuid(), UserId = _user.Id, CreatedUtc = DateTime.UtcNow };
+            db.UserProfiles.Add(profile);
         }
 
-        _profile.DisplayName = Model.DisplayName;
-        _profile.Bio = Model.Bio;
-        await Db.SaveChangesAsync();
+        profile.DisplayName = Model.DisplayName;
+        profile.Bio = Model.Bio;
+        await db.SaveChangesAsync();
+        
+        _profile = profile;
         _saved = true;
     }
 

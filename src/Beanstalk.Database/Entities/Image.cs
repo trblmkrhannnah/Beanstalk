@@ -2,7 +2,7 @@ using System;
 
 namespace Beanstalk.Database.Entities;
 
-public class ProfileImage
+public class Image
 {
     public Guid Id { get; set; }
 
@@ -10,9 +10,12 @@ public class ProfileImage
 
     public byte[] ImageData { get; set; } = Array.Empty<byte>();
 
+    public byte[]? ThumbnailData { get; set; }
+
     public string ContentType { get; set; } = string.Empty;
 
     public DateTime CreatedUtc { get; set; }
 
     public UserProfile? Profile { get; set; }
 }
+

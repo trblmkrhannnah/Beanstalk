@@ -113,7 +113,7 @@ window.uploadCroppedImageDirect = async function() {
                 const formData = new FormData();
                 formData.append('file', blob, 'profile.png');
 
-                const response = await fetch('/api/profile-images/upload', {
+                const response = await fetch('/api/images/upload', {
                     method: 'POST',
                     body: formData,
                     credentials: 'include'

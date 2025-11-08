@@ -4,8 +4,9 @@
 @using System.Text.RegularExpressions
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
+@using Microsoft.Extensions.DependencyInjection
 @inject NavigationManager Nav
-@inject ApplicationDbContext Db
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
@@ -51,7 +52,10 @@ else
 
     protected override void OnInitialized()
     {
-        var setting = Db.AppSettings.Find("RegistrationsOpen");
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var setting = db.AppSettings.Find("RegistrationsOpen");
         _registrationsOpen = !(setting?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
@@ -90,16 +94,19 @@ else
             return;
         }
 
-        Db.UserProfiles.Add(new UserProfile
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        db.UserProfiles.Add(new UserProfile
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             CreatedUtc = DateTime.UtcNow
         });
-        await Db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         // First-user-admin bootstrap
-        var userCount = await Db.Users.CountAsync();
+        var userCount = await db.Users.CountAsync();
         if (userCount == 1)
         {
             const string adminRole = "Admin";

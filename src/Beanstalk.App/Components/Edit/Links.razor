@@ -5,7 +5,8 @@
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 
-@inject ApplicationDbContext Db
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -80,10 +81,15 @@
         _user = await UserManager.GetUserAsync(state.User);
         if (_user != null)
         {
-            _profile = await Db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            using var scope = ScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
             if (_profile != null)
             {
-                _links = await Db.ProfileLinks.Where(l => l.ProfileId == _profile.Id)
+                _links = await db.ProfileLinks
+                    .AsNoTracking()
+                    .Where(l => l.ProfileId == _profile.Id)
                     .OrderBy(l => l.SortOrder)
                     .ToListAsync();
             }
@@ -137,15 +143,18 @@
     {
         if (_user == null || _profile == null) return;
 
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
         // Load existing from DB
-        var existing = await Db.ProfileLinks.Where(l => l.ProfileId == _profile.Id).ToListAsync();
+        var existing = await db.ProfileLinks.Where(l => l.ProfileId == _profile.Id).ToListAsync();
 
         // Delete removed
         foreach (var e in existing)
         {
             if (!_links.Any(l => l.Id == e.Id))
             {
-                Db.ProfileLinks.Remove(e);
+                db.ProfileLinks.Remove(e);
             }
         }
 
@@ -156,7 +165,7 @@
             if (row == null)
             {
                 l.ProfileId = _profile.Id;
-                Db.ProfileLinks.Add(l);
+                db.ProfileLinks.Add(l);
             }
             else
             {
@@ -167,7 +176,7 @@
             }
         }
 
-        await Db.SaveChangesAsync();
+        await db.SaveChangesAsync();
         _saved = true;
     }
 

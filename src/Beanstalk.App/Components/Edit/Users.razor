@@ -6,10 +6,11 @@
 @using Beanstalk.Database.Entities
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.DependencyInjection
 
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
-@inject ApplicationDbContext Db
+@inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 
@@ -117,7 +118,10 @@
         _loading = true;
         _users.Clear();
 
-        var allUsers = await Db.Users.OrderBy(u => u.UserName).ToListAsync();
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var allUsers = await db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync();
         
         foreach (var user in allUsers)
         {

@@ -5,8 +5,9 @@
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.DependencyInjection
 @inject NavigationManager Nav
-@inject ApplicationDbContext Db
+@inject IServiceScopeFactory ScopeFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
@@ -75,7 +76,11 @@ else
             return;
         }
 
-        _invite = await Db.InviteLinks
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        _invite = await db.InviteLinks
+            .AsNoTracking()
             .FirstOrDefaultAsync(i => i.Code == InviteCode);
 
         if (_invite == null)
@@ -142,8 +147,11 @@ else
             return;
         }
 
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
         // Revalidate invite before proceeding (check for race conditions)
-        var currentInvite = await Db.InviteLinks.FirstOrDefaultAsync(i => i.Code == InviteCode);
+        var currentInvite = await db.InviteLinks.FirstOrDefaultAsync(i => i.Code == InviteCode);
         if (currentInvite == null || !currentInvite.IsActive || 
             (currentInvite.MaxUses.HasValue && currentInvite.CurrentUses >= currentInvite.MaxUses.Value))
         {
@@ -161,7 +169,7 @@ else
         }
 
         // Create profile and update invite usage
-        Db.UserProfiles.Add(new UserProfile
+        db.UserProfiles.Add(new UserProfile
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
@@ -169,18 +177,18 @@ else
         });
 
         // Increment invite uses
-        _invite.CurrentUses++;
+        currentInvite.CurrentUses++;
         
         // Auto-deactivate if max uses reached
-        if (_invite.MaxUses.HasValue && _invite.CurrentUses >= _invite.MaxUses.Value)
+        if (currentInvite.MaxUses.HasValue && currentInvite.CurrentUses >= currentInvite.MaxUses.Value)
         {
-            _invite.IsActive = false;
+            currentInvite.IsActive = false;
         }
 
-        await Db.SaveChangesAsync();
+        await db.SaveChangesAsync();
         
         // First-user-admin bootstrap (though this is unlikely via invite)
-        var userCount = await Db.Users.CountAsync();
+        var userCount = await db.Users.CountAsync();
         if (userCount == 1)
         {
             const string adminRole = "Admin";
