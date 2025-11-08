@@ -9,8 +9,8 @@
 @using System.Security.Cryptography
 @using Microsoft.Extensions.DependencyInjection
 
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
-@inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Nav
@@ -177,8 +177,7 @@
     {
         _loading = true;
         
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         // Auto-delete expired invites that have auto-delete enabled
         var expiredAutoDeleteInvites = await db.InviteLinks
@@ -254,8 +253,7 @@
             AutoDeleteWhenExpired = _newInviteAutoDelete
         };
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         db.InviteLinks.Add(invite);
         await db.SaveChangesAsync();
@@ -272,8 +270,7 @@
 
     private async Task ToggleActiveAsync(InviteLink invite)
     {
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         var inviteToUpdate = await db.InviteLinks.FindAsync(invite.Id);
         if (inviteToUpdate != null)
@@ -289,8 +286,7 @@
 
     private async Task ToggleAutoDeleteAsync(InviteLink invite)
     {
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         var inviteToUpdate = await db.InviteLinks.FindAsync(invite.Id);
         if (inviteToUpdate != null)
@@ -314,8 +310,7 @@
             return;
         }
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         var inviteToDelete = await db.InviteLinks.FindAsync(invite.Id);
         if (inviteToDelete != null)

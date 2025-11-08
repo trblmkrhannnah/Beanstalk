@@ -9,7 +9,7 @@
 @using Beanstalk.Database.Entities
 @using QRCoder
 @using Microsoft.Extensions.DependencyInjection
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject AuthenticationStateProvider AuthStateProvider
@@ -389,8 +389,7 @@
         IdentityResult deleteResult;
         try
         {
-            using var scope = ScopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await using var db = await DbFactory.CreateDbContextAsync();
             
             var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
             if (profile != null)

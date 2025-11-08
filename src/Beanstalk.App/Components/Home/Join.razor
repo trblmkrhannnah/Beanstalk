@@ -7,7 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.DependencyInjection
 @inject NavigationManager Nav
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
@@ -76,8 +76,7 @@ else
             return;
         }
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         _invite = await db.InviteLinks
             .AsNoTracking()
@@ -147,8 +146,7 @@ else
             return;
         }
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         // Revalidate invite before proceeding (check for race conditions)
         var currentInvite = await db.InviteLinks.FirstOrDefaultAsync(i => i.Code == InviteCode);

@@ -5,8 +5,7 @@
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 
-@using Microsoft.Extensions.DependencyInjection
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -81,8 +80,7 @@
         _user = await UserManager.GetUserAsync(state.User);
         if (_user != null)
         {
-            using var scope = ScopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await using var db = await DbFactory.CreateDbContextAsync();
             
             _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
             if (_profile != null)
@@ -143,8 +141,7 @@
     {
         if (_user == null || _profile == null) return;
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         // Load existing from DB
         var existing = await db.ProfileLinks.Where(l => l.ProfileId == _profile.Id).ToListAsync();

@@ -1,12 +1,12 @@
 @page "/edit/"
 @page "/edit/dashboard"
+@* @rendermode InteractiveServer *@
 
 @using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 
-@using Microsoft.Extensions.DependencyInjection
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -16,7 +16,7 @@
         {
             <p>Loading...</p>
         }
-        else if (_profile is null || _user is null)
+        else if (Model is null || _user is null)
         {
             <p>Profile not found.</p>
         }
@@ -53,7 +53,6 @@
 
 @code {
     private ApplicationUser? _user;
-    private UserProfile? _profile;
     [SupplyParameterFromForm] private DashboardModel? Model { get; set; }
     private bool _loading = true;
     private bool _saved;
@@ -62,23 +61,23 @@
     {
         _loading = true;
         _saved = false;
+        
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = await UserManager.GetUserAsync(state.User);
 
         if (_user != null)
         {
-            using var scope = ScopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await using var db = await DbFactory.CreateDbContextAsync();
             
-            _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
+            var profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
 
             if (Model == null)
             {
                 Model = new();
                 
                 Model.UserEnabled = _user.IsEnabled;
-                Model.DisplayName = _profile?.DisplayName;
-                Model.Bio = _profile?.Bio;
+                Model.DisplayName = profile?.DisplayName;
+                Model.Bio = profile?.Bio;
             }
         }
 
@@ -90,12 +89,19 @@
         if (_user == null)
             return;
 
-        _user.IsEnabled = Model.UserEnabled;
-        await UserManager.UpdateAsync(_user);
-
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        // Update user enabled status
+        var userToUpdate = await UserManager.FindByIdAsync(_user.Id.ToString());
+        if (userToUpdate != null)
+        {
+            userToUpdate.IsEnabled = Model.UserEnabled;
+            await UserManager.UpdateAsync(userToUpdate);
+            
+            // Update our local reference
+            _user.IsEnabled = Model.UserEnabled;
+        }
         
+        // Update profile
+        await using var db = await DbFactory.CreateDbContextAsync();
         var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == _user.Id);
         
         if (profile == null)
@@ -108,7 +114,7 @@
         profile.Bio = Model.Bio;
         await db.SaveChangesAsync();
         
-        _profile = profile;
+        // Refresh local reference
         _saved = true;
     }
 

@@ -6,8 +6,7 @@
 @using Beanstalk.Database.Entities
 
 @using Microsoft.Extensions.DependencyInjection
-@inject IServiceScopeFactory ScopeFactory
-@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -19,7 +18,7 @@
             {
                 <p>Loading...</p>
             }
-            else if (_profile is null || _user is null)
+            else if (_profile is null)
             {
                 <p>Profile not found.</p>
             }
@@ -117,7 +116,6 @@
 </CascadingAuthenticationState>
 
 @code {
-    private ApplicationUser? _user;
     private UserProfile? _profile;
     private List<Image> _images = new();
     private bool _loading = true;
@@ -130,24 +128,27 @@
     {
         _loading = true;
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        _user = await UserManager.GetUserAsync(state.User);
-        if (_user != null)
+        
+        // Get user ID directly from claims instead of using UserManager
+        var userIdClaim = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
         {
-            using var scope = ScopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await using var db = await DbFactory.CreateDbContextAsync();
             
             _profile = await db.UserProfiles
                 .AsNoTracking()
                 .Include(p => p.Images)
-                .FirstOrDefaultAsync(p => p.UserId == _user.Id);
+                .FirstOrDefaultAsync(p => p.UserId == userId);
             
             if (_profile != null)
             {
                 _images = _profile.Images.OrderByDescending(i => i.CreatedUtc).ToList();
             }
             
-            // Get max images setting
-            var maxImagesSetting = await db.AppSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == "MaxImagesPerUser");
+            var maxImagesSetting = await db.AppSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "MaxImagesPerUser");
+            
             if (maxImagesSetting != null && int.TryParse(maxImagesSetting.Value, out var parsedMax))
             {
                 _maxImages = parsedMax;

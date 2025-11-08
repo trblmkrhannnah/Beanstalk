@@ -6,7 +6,7 @@
 @using Beanstalk.Database.Entities
 @using Microsoft.Extensions.DependencyInjection
 @inject NavigationManager Nav
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
@@ -50,12 +50,11 @@ else
     [SupplyParameterFromForm]
     private RegisterModel Model { get; set; } = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
-        var setting = db.AppSettings.Find("RegistrationsOpen");
+        var setting = await db.AppSettings.FindAsync("RegistrationsOpen");
         _registrationsOpen = !(setting?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
@@ -94,8 +93,7 @@ else
             return;
         }
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         db.UserProfiles.Add(new UserProfile
         {

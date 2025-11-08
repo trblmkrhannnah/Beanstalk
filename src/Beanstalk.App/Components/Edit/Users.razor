@@ -8,9 +8,9 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.DependencyInjection
 
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
-@inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 
@@ -118,8 +118,7 @@
         _loading = true;
         _users.Clear();
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         var allUsers = await db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync();
         

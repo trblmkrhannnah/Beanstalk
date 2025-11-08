@@ -8,21 +8,23 @@ namespace Beanstalk.App.Features.ProfileDisplay;
 
 public sealed class ProfileDisplayModelFactory
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public ProfileDisplayModelFactory(ApplicationDbContext context)
+    public ProfileDisplayModelFactory(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<ProfileDisplayModel?> TryGetProfile(string username, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName!.ToLower() == username.ToLower(), cancellationToken: cancellationToken);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        
+        var user = await context.Users.FirstOrDefaultAsync(u => u.UserName!.ToLower() == username.ToLower(), cancellationToken: cancellationToken);
 
         if (user is not { IsEnabled: true })
             return null;
 
-        var contextProfile = await _context.UserProfiles
+        var contextProfile = await context.UserProfiles
             .Include(p => p.Images)
             .Include(p => p.ThemePalette)
             .FirstOrDefaultAsync(p => p.UserId == user.Id, cancellationToken);
@@ -30,7 +32,7 @@ public sealed class ProfileDisplayModelFactory
         if (contextProfile == null)
             return null;
 
-        var links = await _context.ProfileLinks
+        var links = await context.ProfileLinks
             .Where(l => l.ProfileId == contextProfile.Id && l.IsVisible)
             .OrderBy(l => l.SortOrder).Select(l => new ProfileDisplayLinkModel
             {
@@ -39,7 +41,7 @@ public sealed class ProfileDisplayModelFactory
             })
             .ToListAsync(cancellationToken);
 
-        var contextPalette = contextProfile.ThemePalette ?? await _context.ThemePalettes.FirstOrDefaultAsync(p => p.IsDefault, cancellationToken);
+        var contextPalette = contextProfile.ThemePalette ?? await context.ThemePalettes.FirstOrDefaultAsync(p => p.IsDefault, cancellationToken);
 
         return new ProfileDisplayModel
         {

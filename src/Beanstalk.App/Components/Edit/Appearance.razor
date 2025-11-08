@@ -7,8 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.Extensions.DependencyInjection
-@inject IServiceScopeFactory ScopeFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -88,8 +87,7 @@
         _user = await UserManager.GetUserAsync(state.User);
         if (_user != null)
         {
-            using var scope = ScopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await using var db = await DbFactory.CreateDbContextAsync();
             
             _profile = await db.UserProfiles
                 .Include(p => p.ThemePalette)
@@ -106,6 +104,9 @@
                 };
                 db.UserProfiles.Add(_profile);
                 await db.SaveChangesAsync();
+                
+                // Re-fetch with AsNoTracking after saving
+                _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == _profile.Id);
             }
 
             _selectedPaletteId = _profile.ThemePaletteId;
@@ -127,8 +128,7 @@
     {
         if (_profile == null) return;
 
-        using var scope = ScopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = await DbFactory.CreateDbContextAsync();
         
         var profileToUpdate = await db.UserProfiles.FindAsync(_profile.Id);
         if (profileToUpdate != null)

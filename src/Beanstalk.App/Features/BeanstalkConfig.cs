@@ -6,10 +6,11 @@ using Beanstalk.Database.Data;
 using Beanstalk.Database.Entities;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Beanstalk.App.Features;
 
-public sealed class BeanstalkConfig(ApplicationDbContext context, AuthenticationStateProvider authStateProvider, UserManager<ApplicationUser> userManager)
+public sealed class BeanstalkConfig(IDbContextFactory<ApplicationDbContext>  contextFactory, AuthenticationStateProvider authStateProvider, UserManager<ApplicationUser> userManager)
 {
     public ConfigItem<bool> RegistrationsEnabled => new("RegistrationsOpen", true, OnGetValue, OnSetValue);
     public ConfigItem<int> MaxImagesPerUser => new("MaxImagesPerUser", 10, OnGetValue, OnSetValue);
@@ -17,6 +18,8 @@ public sealed class BeanstalkConfig(ApplicationDbContext context, Authentication
 
     private async Task<TValue> OnGetValue<TValue>(string key, TValue defaultValue, CancellationToken cancellationToken) where TValue : IParsable<TValue>
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        
         var configValue = await context.AppSettings.FindAsync(key, cancellationToken);
 
         if (configValue is not null && TValue.TryParse(configValue.Value, CultureInfo.InvariantCulture, out var parsedValue))
@@ -30,6 +33,8 @@ public sealed class BeanstalkConfig(ApplicationDbContext context, Authentication
         var state = await authStateProvider.GetAuthenticationStateAsync();
         var user = await userManager.GetUserAsync(state.User);
 
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        
         if (!state.User.IsInRole("Admin"))
             throw new UnauthorizedAccessException();
 

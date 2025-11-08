@@ -18,12 +18,12 @@ namespace Beanstalk.App.Controllers;
 public class ImagesController : ControllerBase
 {
     private readonly BeanstalkConfig _config;
-    private readonly ApplicationDbContext _db;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ImagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, BeanstalkConfig config)
+    public ImagesController(IDbContextFactory<ApplicationDbContext> dbFactory, UserManager<ApplicationUser> userManager, BeanstalkConfig config)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _userManager = userManager;
         _config = config;
     }
@@ -34,7 +34,8 @@ public class ImagesController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetImage(Guid id)
     {
-        var image = await _db.Images.FindAsync(id);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var image = await db.Images.FindAsync(id);
         if (image == null) return NotFound();
 
         return File(image.ImageData, image.ContentType);
@@ -46,7 +47,8 @@ public class ImagesController : ControllerBase
     [HttpGet("{id:guid}/thumbnail")]
     public async Task<IActionResult> GetImageThumbnail(Guid id)
     {
-        var image = await _db.Images.FindAsync(id);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var image = await db.Images.FindAsync(id);
         if (image == null) return NotFound();
 
         // Check if thumbnail exists, if not generate it (for legacy images)
@@ -63,8 +65,8 @@ public class ImagesController : ControllerBase
             image.ThumbnailData = outputStream.ToArray();
             
             // Save the generated thumbnail to database
-            _db.Images.Update(image);
-            await _db.SaveChangesAsync();
+            db.Images.Update(image);
+            await db.SaveChangesAsync();
         }
 
         return File(image.ThumbnailData, image.ContentType);
@@ -84,15 +86,16 @@ public class ImagesController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        var profile = await _db.UserProfiles
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var profile = await db.UserProfiles
             .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.UserId == user.Id);
 
         if (profile == null)
         {
             profile = new UserProfile { Id = Guid.NewGuid(), UserId = user.Id, CreatedUtc = DateTime.UtcNow };
-            _db.UserProfiles.Add(profile);
-            await _db.SaveChangesAsync();
+            db.UserProfiles.Add(profile);
+            await db.SaveChangesAsync();
         }
 
         var maxImages = await _config.MaxImagesPerUser.Get();
@@ -143,13 +146,13 @@ public class ImagesController : ControllerBase
             CreatedUtc = DateTime.UtcNow
         };
 
-        _db.Images.Add(stored);
+        db.Images.Add(stored);
 
         // Set as default if no default image exists
         if (!profile.SelectedImageId.HasValue)
             profile.SelectedImageId = stored.Id;
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return Ok(new { id = stored.Id, url = $"/api/images/{stored.Id}" });
     }
@@ -168,12 +171,13 @@ public class ImagesController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
 
         if (profile == null)
             return NotFound();
 
-        var image = await _db.Images.FindAsync(id);
+        var image = await db.Images.FindAsync(id);
 
         if (image == null || image.ProfileId != profile.Id)
             return NotFound();
@@ -182,8 +186,8 @@ public class ImagesController : ControllerBase
         if (profile.SelectedImageId == id)
             profile.SelectedImageId = null;
 
-        _db.Images.Remove(image);
-        await _db.SaveChangesAsync();
+        db.Images.Remove(image);
+        await db.SaveChangesAsync();
 
         return Ok(new { success = true });
     }
@@ -202,18 +206,19 @@ public class ImagesController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.Id);
 
         if (profile == null)
             return NotFound();
 
-        var image = await _db.Images.FindAsync(id);
+        var image = await db.Images.FindAsync(id);
 
         if (image == null || image.ProfileId != profile.Id)
             return NotFound();
 
         profile.SelectedImageId = id;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return Ok(new { success = true });
     }
