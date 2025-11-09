@@ -38,12 +38,12 @@
         var result = await SignInManager.PasswordSignInAsync(Model.Username, Model.Password, true, lockoutOnFailure: false);
         if (result.Succeeded)
         {
-            Nav.NavigateTo("/edit/dashboard", true);
+            Nav.NavigateTo("/edit/", true);
         }
         else if (result.RequiresTwoFactor)
         {
             // Store username in session or pass as parameter
-            Nav.NavigateTo($"/home/login-2fa?returnUrl={Uri.EscapeDataString("/edit/dashboard")}", true);
+            Nav.NavigateTo($"/home/login-2fa?returnUrl={Uri.EscapeDataString("/edit/")}", true);
         }
         else if (result.IsLockedOut)
         {

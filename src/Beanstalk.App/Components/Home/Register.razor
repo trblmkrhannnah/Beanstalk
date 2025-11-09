@@ -120,7 +120,7 @@
         }
 
         await SignInManager.SignInAsync(user, isPersistent: true);
-        Nav.NavigateTo("/edit/dashboard", true);
+        Nav.NavigateTo("/edit/", true);
     }
 
     private string? _validationMessage;
