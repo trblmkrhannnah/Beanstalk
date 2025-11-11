@@ -29,12 +29,6 @@
                 <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">Manage your profile images.</p>
 
                 <div class="space-y-6">
-                    <div class="mb-6">
-                        <button class="btn-primary" @onclick="ShowUploadModal" disabled="@(_images.Count >= _maxImages)">
-                            Upload New Image
-                        </button>
-                    </div>
-
                     <!-- Stats Card -->
                     <div class="card-cute mb-6">
                         <div class="flex items-center justify-between mb-3 sm:mb-4">
@@ -52,63 +46,64 @@
                     </div>
 
                     <!-- Images Grid -->
-                    @if (_images.Count == 0)
-                    {
-                        <div class="card-cute text-center py-16 bg-gray-50">
-                            <h4 class="text-2xl font-semibold text-gray-800 mb-2">No Images Yet</h4>
-                            <p class="text-gray-600 mb-6">Upload your first profile image to get started!</p>
-                            <button class="btn-primary" @onclick="ShowUploadModal">
-                                Upload Your First Image
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            @foreach (var img in _images)
-                            {
-                                var isDefault = _profile.SelectedImageId == img.Id;
-                                <div class="group relative card-cute p-0 overflow-hidden @(isDefault ? "ring-2 ring-indigo-500" : "")">
-                                    <!-- Image -->
-                                    <div class="relative aspect-square bg-gray-100">
-                                        <img src="/api/images/@img.Id" 
-                                             alt="Profile Image" 
-                                             class="w-full h-full object-cover" />
-                                        
-                                        <!-- Default Badge -->
-                                        @if (isDefault)
-                                        {
-                                            <div class="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
-                                                <span>✓</span> Default
-                                            </div>
-                                        }
-                                        
-                                        <!-- Overlay on Hover -->
-                                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-                                            @if (!isDefault)
-                                            {
-                                                <button class="px-4 py-2 bg-white text-gray-800 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm" 
-                                                        @onclick="(() => SetAsDefault(img.Id))">
-                                                    Set Default
-                                                </button>
-                                            }
-                                            <button class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors text-sm" 
-                                                    @onclick="(() => DeleteImage(img.Id))">
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Image Info -->
-                                    <div class="p-3 bg-white">
-                                        <div class="text-xs text-gray-500">
-                                            @img.CreatedUtc.ToString("MMM dd, yyyy")
-                                        </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <!-- Add Image Placeholder Card (Always First) -->
+                        @if (_images.Count < _maxImages)
+                        {
+                            <div class="card-cute p-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all" 
+                                 @onclick="ShowUploadModal">
+                                <div class="relative aspect-square bg-gray-100 flex items-center justify-center">
+                                    <div class="text-center p-4">
+                                        <div class="text-4xl text-gray-400 mb-2">+</div>
+                                        <div class="text-sm font-medium text-gray-600">Add Image</div>
                                     </div>
                                 </div>
-                            }
-                        </div>
-                    }
+                            </div>
+                        }
+                        
+                        @foreach (var img in _images)
+                        {
+                            var isDefault = _profile.SelectedImageId == img.Id;
+                            <div class="group relative card-cute p-0 overflow-hidden @(isDefault ? "ring-2 ring-indigo-500" : "")">
+                                <!-- Image -->
+                                <div class="relative aspect-square bg-gray-100">
+                                    <img src="/api/images/@img.Id" 
+                                         alt="Profile Image" 
+                                         class="w-full h-full object-cover" />
+                                    
+                                    <!-- Default Badge -->
+                                    @if (isDefault)
+                                    {
+                                        <div class="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                                            <span>✓</span> Default
+                                        </div>
+                                    }
+                                    
+                                    <!-- Overlay on Hover -->
+                                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                                        @if (!isDefault)
+                                        {
+                                            <button class="px-4 py-2 bg-white text-gray-800 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm" 
+                                                    @onclick="(() => SetAsDefault(img.Id))">
+                                                Set Default
+                                            </button>
+                                        }
+                                        <button class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors text-sm" 
+                                                @onclick="(() => DeleteImage(img.Id))">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Image Info -->
+                                <div class="p-3 bg-white">
+                                    <div class="text-xs text-gray-500">
+                                        @img.CreatedUtc.ToString("MMM dd, yyyy")
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
 
