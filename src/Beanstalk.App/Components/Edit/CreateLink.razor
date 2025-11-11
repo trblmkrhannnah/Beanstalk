@@ -1,0 +1,202 @@
+@page "/edit/links/create"
+@rendermode InteractiveServer
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@using Microsoft.AspNetCore.Components
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_loading)
+            {
+                <p class="text-center text-gray-600 text-lg py-12">Loading...</p>
+            }
+            else if (_profile is null || _user is null)
+            {
+                <div class="card-cute text-center py-12">
+                    <p class="text-gray-600">Profile not found.</p>
+                </div>
+            }
+            else
+            {
+                <!-- Breadcrumbs -->
+                <nav class="mb-4" aria-label="Breadcrumb">
+                    <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                        <li><a href="/edit/links" class="hover:text-gray-900">Links</a></li>
+                        <li><span class="text-gray-400">/</span></li>
+                        <li><span class="text-gray-900">Create Link</span></li>
+                    </ol>
+                </nav>
+
+                <div class="max-w-2xl">
+                    <h3 class="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Create New Link</h3>
+                    <p class="text-sm sm:text-base text-gray-600 mb-6">Add a new link to your profile.</p>
+
+                    <div class="card-cute">
+                        @if (_error != null)
+                        {
+                            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                                @_error
+                            </div>
+                        }
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Link Title <span class="text-red-500">*</span>
+                                </label>
+                                <InputText class="input-cute" 
+                                           @bind-Value="_link.Title" 
+                                           placeholder="e.g., My Portfolio" />
+                                @if (string.IsNullOrWhiteSpace(_link.Title) && _submitted)
+                                {
+                                    <p class="text-xs text-red-500 mt-1">Title is required</p>
+                                }
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    URL <span class="text-red-500">*</span>
+                                </label>
+                                <InputText class="@GetUrlInputClass()" 
+                                           @bind-Value="_link.Url" 
+                                           placeholder="https://example.com" />
+                                @if (!string.IsNullOrWhiteSpace(_link.Url) && !_isValidUrl)
+                                {
+                                    <p class="text-xs text-red-500 mt-1">Please enter a valid URL</p>
+                                }
+                                else if (string.IsNullOrWhiteSpace(_link.Url) && _submitted)
+                                {
+                                    <p class="text-xs text-red-500 mt-1">URL is required</p>
+                                }
+                                else if (string.IsNullOrWhiteSpace(_link.Url))
+                                {
+                                    <p class="text-xs text-gray-500 mt-1">Include https:// or http://</p>
+                                }
+                            </div>
+
+                            <div>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" 
+                                           class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" 
+                                           @bind="_link.IsVisible" />
+                                    <span class="text-sm font-medium text-gray-700">
+                                        Visible on profile
+                                    </span>
+                                </label>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_link.Title) && _isValidUrl)
+                            {
+                                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div class="text-xs text-gray-500 mb-2 uppercase tracking-wide">Preview</div>
+                                    <a href="@_link.Url" target="_blank" rel="noopener" 
+                                       class="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                                        <span class="font-semibold text-gray-800">@_link.Title</span>
+                                        <span class="text-gray-400">→</span>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                            <button type="button" class="btn-secondary flex-1" @onclick="NavigateToLinks">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn-primary flex-1" @onclick="SaveAsync">
+                                Create Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <PleaseLogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private ApplicationUser? _user;
+    private UserProfile? _profile;
+    private ProfileLink _link = new() { Title = "", Url = "https://", IsVisible = true };
+    private bool _loading = true;
+    private bool _submitted = false;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = await UserManager.GetUserAsync(state.User);
+        if (_user != null)
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == _user.Id);
+        }
+        _loading = false;
+    }
+
+    private bool _isValidUrl => !string.IsNullOrWhiteSpace(_link.Url) && Uri.TryCreate(_link.Url, UriKind.Absolute, out _);
+
+    private string GetUrlInputClass()
+    {
+        var baseClass = "input-cute";
+        if (!string.IsNullOrWhiteSpace(_link.Url) && !_isValidUrl)
+        {
+            return $"{baseClass} border-red-300";
+        }
+        return baseClass;
+    }
+
+    private void NavigateToLinks()
+    {
+        Nav.NavigateTo("/edit/links");
+    }
+
+    private async Task SaveAsync()
+    {
+        _submitted = true;
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_link.Title))
+        {
+            _error = "Title is required";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_link.Url) || !_isValidUrl)
+        {
+            _error = "A valid URL is required";
+            return;
+        }
+
+        if (_user == null || _profile == null) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        
+        // Get max sort order
+        var maxOrder = await db.ProfileLinks
+            .Where(l => l.ProfileId == _profile.Id)
+            .Select(l => (int?)l.SortOrder)
+            .MaxAsync() ?? -1;
+
+        _link.Id = Guid.NewGuid();
+        _link.ProfileId = _profile.Id;
+        _link.SortOrder = maxOrder + 1;
+
+        db.ProfileLinks.Add(_link);
+        await db.SaveChangesAsync();
+
+        Nav.NavigateTo("/edit/links");
+    }
+}
+

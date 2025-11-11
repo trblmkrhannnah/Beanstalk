@@ -1,0 +1,19 @@
+.sortable-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* Increased spacing between items */
+}
+
+.sortable-item {
+    cursor: move;
+}
+
+.sortable-item.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-item.sortable-drag {
+    opacity: 0.8;
+}
+

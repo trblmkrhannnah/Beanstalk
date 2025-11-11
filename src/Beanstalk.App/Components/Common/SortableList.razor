@@ -1,0 +1,113 @@
+@typeparam TItem
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+
+<div id="@Id" class="sortable-list">
+    @foreach (var item in Items)
+    {
+        <div class="sortable-item">
+            @if (SortableItemTemplate != null)
+            {
+                @SortableItemTemplate(item)
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public RenderFragment<TItem>? SortableItemTemplate { get; set; }
+    [Parameter] public IEnumerable<TItem> Items { get; set; } = new List<TItem>();
+    [Parameter] public EventCallback<(int oldIndex, int newIndex)> OnUpdate { get; set; }
+    [Parameter] public EventCallback<(int oldIndex, int newIndex)> OnRemove { get; set; }
+    [Parameter] public string? Group { get; set; }
+    [Parameter] public string? Pull { get; set; }
+    [Parameter] public bool Put { get; set; } = true;
+    [Parameter] public bool Sort { get; set; } = true;
+    [Parameter] public string Handle { get; set; } = "";
+    [Parameter] public string Filter { get; set; } = "";
+    [Parameter] public bool ForceFallback { get; set; } = true;
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _sortableInstance;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./sortable-list.js");
+            await InitializeSortable();
+        }
+        else if (_sortableInstance != null)
+        {
+            // When items change, we need to let SortableJS know the DOM has been updated
+            // The DOM should already be in the correct order from Blazor's render
+            // We just need to ensure SortableJS is aware
+            try
+            {
+                // Optionally refresh sortable if needed
+            }
+            catch { }
+        }
+    }
+
+    private async Task InitializeSortable()
+    {
+        if (_module == null) return;
+
+        var dotNetRef = DotNetObjectReference.Create(this);
+        _sortableInstance = await _module.InvokeAsync<IJSObjectReference>("initializeSortable", 
+            Id, 
+            Handle, 
+            Filter, 
+            Group, 
+            Pull, 
+            Put, 
+            Sort, 
+            ForceFallback,
+            dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnSortableUpdate(int oldIndex, int newIndex)
+    {
+        if (OnUpdate.HasDelegate)
+        {
+            await OnUpdate.InvokeAsync((oldIndex, newIndex));
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnSortableRemove(int oldIndex, int newIndex)
+    {
+        if (OnRemove.HasDelegate)
+        {
+            await OnRemove.InvokeAsync((oldIndex, newIndex));
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_sortableInstance != null)
+        {
+            try
+            {
+                await _sortableInstance.InvokeVoidAsync("destroy");
+            }
+            catch { }
+        }
+
+        if (_module != null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch { }
+        }
+    }
+}
+
