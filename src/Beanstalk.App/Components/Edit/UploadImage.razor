@@ -1,0 +1,161 @@
+@page "/edit/images/upload"
+@rendermode InteractiveServer
+
+@using Beanstalk.App.Components.Common
+@using Beanstalk.Database.Data
+@using Beanstalk.Database.Entities
+@using Microsoft.Extensions.DependencyInjection
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @if (_loading)
+            {
+                <p class="text-center text-gray-600 text-lg py-12">Loading...</p>
+            }
+            else if (_profile is null)
+            {
+                <div class="card-cute text-center py-12">
+                    <p class="text-gray-600">Profile not found.</p>
+                </div>
+            }
+            else if (_images.Count >= _maxImages)
+            {
+                <div class="card-cute text-center py-12">
+                    <p class="text-red-500 mb-4">You have reached the maximum number of images allowed (@_maxImages).</p>
+                    <p class="text-gray-600 mb-6">Please delete existing images to upload new ones.</p>
+                    <button class="btn-primary" @onclick="NavigateToImages">
+                        Back to Images
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="max-w-5xl mx-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Upload Profile Image</h3>
+                            <p class="text-sm sm:text-base text-gray-600">Add a new image to your profile.</p>
+                        </div>
+                        <button class="text-gray-400 hover:text-gray-600 text-2xl font-bold w-8 h-8 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" 
+                                @onclick="NavigateToImages">
+                            ×
+                        </button>
+                    </div>
+
+                    @if (_uploadError != null)
+                    {
+                        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                            @_uploadError
+                        </div>
+                    }
+
+                    <div class="card-cute">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="imageFile" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Select an Image
+                                </label>
+                                <div class="relative">
+                                    <input type="file" 
+                                           id="imageFile" 
+                                           class="input-cute cursor-pointer" 
+                                           accept="image/jpeg,image/png,image/webp" 
+                                           onchange="handleImageFileSelected(this)" />
+                                </div>
+                                <small class="block mt-2 text-sm text-gray-500">
+                                    Supported formats: JPEG, PNG, WebP • Maximum size: 10MB
+                                </small>
+                            </div>
+
+                            <div id="cropperContainer" 
+                                 class="hidden mt-4">
+                                <p class="text-sm font-medium text-gray-700 mb-3">
+                                    Crop your image to a square (1024x1024px recommended):
+                                </p>
+                                <div class="relative bg-white rounded-lg overflow-hidden shadow-inner max-h-[calc(100vh-300px)] flex items-center justify-center">
+                                    <img id="cropperImage" class="max-w-full max-h-[calc(100vh-300px)]" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                            <button type="button" class="btn-secondary flex-1" @onclick="NavigateToImages">
+                                Cancel
+                            </button>
+                            <button type="button" 
+                                    id="saveUploadBtn" 
+                                    class="btn-primary flex-1 hidden" 
+                                    onclick="saveAndUploadImage()">
+                                <span id="uploadBtnText">Save & Upload</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <PleaseLogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    private UserProfile? _profile;
+    private List<Image> _images = new();
+    private bool _loading = true;
+    private int _maxImages = 10;
+    private string? _uploadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        
+        // Get user ID directly from claims instead of using UserManager
+        var userIdClaim = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            
+            _profile = await db.UserProfiles
+                .AsNoTracking()
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+            
+            if (_profile != null)
+            {
+                _images = _profile.Images.OrderByDescending(i => i.CreatedUtc).ToList();
+            }
+            
+            var maxImagesSetting = await db.AppSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "MaxImagesPerUser");
+            
+            if (maxImagesSetting != null && int.TryParse(maxImagesSetting.Value, out var parsedMax))
+            {
+                _maxImages = parsedMax;
+            }
+        }
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Reset any existing cropper state when page loads
+            await JS.InvokeVoidAsync("resetUploadModal");
+        }
+    }
+
+    private void NavigateToImages()
+    {
+        Nav.NavigateTo("/edit/images");
+    }
+}
+
