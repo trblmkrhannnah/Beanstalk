@@ -1,7 +1,6 @@
 @page "/edit/links"
 @rendermode InteractiveServer
 
-@using Beanstalk.App.Components.Common
 @using Beanstalk.Database.Data
 @using Beanstalk.Database.Entities
 @using System.Text.RegularExpressions
@@ -58,23 +57,31 @@
                     }
                     else
                     {
-                        <SortableList TItem="ProfileLink" 
-                                      Id="linksContainer" 
-                                      Items="_links" 
-                                      OnUpdate="OnLinkReordered" 
-                                      Handle=".drag-handle"
-                                      Context="link">
-                            <SortableItemTemplate>
-                                @{
-                                    var isValidUrl = !string.IsNullOrWhiteSpace(link.Url) && Uri.TryCreate(link.Url, UriKind.Absolute, out _);
-                                }
+                        <div class="space-y-3">
+                            @for (int i = 0; i < _links.Count; i++)
+                            {
+                                var link = _links[i];
+                                var index = i;
+                                var isValidUrl = !string.IsNullOrWhiteSpace(link.Url) && Uri.TryCreate(link.Url, UriKind.Absolute, out _);
+                                
                                 <div class="card-cute @(link.IsVisible ? "" : "opacity-60")">
                                     <div class="flex items-center gap-4">
-                                        <!-- Drag Handle Icon -->
-                                        <div class="drag-handle flex-shrink-0 text-gray-400 cursor-grab active:cursor-grabbing">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
-                                            </svg>
+                                        <!-- Up/Down Arrow Buttons -->
+                                        <div class="flex flex-col flex-shrink-0 gap-1">
+                                            <button class="p-1 text-gray-400 hover:text-gray-600 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+                                                    @onclick="(() => MoveLinkUp(index))"
+                                                    disabled="@(index == 0)">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-gray-400 hover:text-gray-600 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+                                                    @onclick="(() => MoveLinkDown(index))"
+                                                    disabled="@(index == _links.Count - 1)">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
                                         </div>
 
                                         <!-- Link Content -->
@@ -135,8 +142,8 @@
                                         </div>
                                     </div>
                                 </div>
-                            </SortableItemTemplate>
-                        </SortableList>
+                            }
+                        </div>
                     }
                 </div>
             }
@@ -178,47 +185,34 @@
         _loading = false;
     }
 
-    private async Task OnLinkReordered((int oldIndex, int newIndex) indices)
+    private async Task MoveLinkUp(int index)
     {
-        var (oldIndex, newIndex) = indices;
-        
-        if (oldIndex < 0 || oldIndex >= _links.Count || newIndex < 0 || newIndex > _links.Count)
+        if (index <= 0 || index >= _links.Count)
             return;
 
-        // SortableJS provides indices based on the original list order
-        // We need to move the item from oldIndex to newIndex
-        var linkToMove = _links[oldIndex];
-        
-        // Remove the item first
-        _links.RemoveAt(oldIndex);
-        
-        // Calculate the correct insertion index
-        // If newIndex > oldIndex, we need to account for the removal
-        // If newIndex <= oldIndex, we can insert directly at newIndex
-        var insertIndex = newIndex;
-        if (newIndex > oldIndex)
-        {
-            // After removing at oldIndex, everything shifted down
-            // So newIndex needs to be decremented by 1
-            insertIndex = newIndex - 1;
-        }
-        
-        // Ensure insertIndex is within bounds
-        if (insertIndex < 0)
-            insertIndex = 0;
-        if (insertIndex > _links.Count)
-            insertIndex = _links.Count;
-        
-        // Insert at the calculated position
-        _links.Insert(insertIndex, linkToMove);
-        
+        // Swap with item above
+        var temp = _links[index];
+        _links[index] = _links[index - 1];
+        _links[index - 1] = temp;
+
         Reindex();
-        
-        // Update state first so UI reflects the change
-        StateHasChanged();
-        
-        // Then save to database
         await SaveOrderAsync();
+        StateHasChanged();
+    }
+
+    private async Task MoveLinkDown(int index)
+    {
+        if (index < 0 || index >= _links.Count - 1)
+            return;
+
+        // Swap with item below
+        var temp = _links[index];
+        _links[index] = _links[index + 1];
+        _links[index + 1] = temp;
+
+        Reindex();
+        await SaveOrderAsync();
+        StateHasChanged();
     }
 
     private void NavigateToCreate()

@@ -739,9 +739,6 @@
   .h-screen {
     height: 100vh;
   }
-  .max-h-\[90vh\] {
-    max-height: 90vh;
-  }
   .max-h-\[calc\(100vh-300px\)\] {
     max-height: calc(100vh - 300px);
   }
@@ -1119,12 +1116,6 @@
   }
   .bg-black {
     background-color: var(--color-black);
-  }
-  .bg-black\/50 {
-    background-color: color-mix(in srgb, #000 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
-    }
   }
   .bg-black\/60 {
     background-color: color-mix(in srgb, #000 60%, transparent);
@@ -2046,9 +2037,9 @@
       cursor: not-allowed;
     }
   }
-  .disabled\:opacity-30 {
+  .disabled\:text-gray-200 {
     &:disabled {
-      opacity: 30%;
+      color: var(--color-gray-200);
     }
   }
   .disabled\:opacity-50 {
@@ -2112,11 +2103,6 @@
       width: calc(var(--spacing) * 32);
     }
   }
-  .sm\:w-auto {
-    @media (width >= 40rem) {
-      width: auto;
-    }
-  }
   .sm\:max-w-md {
     @media (width >= 40rem) {
       max-width: var(--container-md);
@@ -2127,11 +2113,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-  .sm\:grid-cols-3 {
-    @media (width >= 40rem) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
   .sm\:flex-row {
     @media (width >= 40rem) {
       flex-direction: row;
@@ -2140,11 +2121,6 @@
   .sm\:items-center {
     @media (width >= 40rem) {
       align-items: center;
-    }
-  }
-  .sm\:gap-2 {
-    @media (width >= 40rem) {
-      gap: calc(var(--spacing) * 2);
     }
   }
   .sm\:gap-3 {
@@ -2374,11 +2350,6 @@
   .lg\:grid-cols-4 {
     @media (width >= 64rem) {
       grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  .lg\:grid-cols-5 {
-    @media (width >= 64rem) {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
   }
   .lg\:px-12 {
