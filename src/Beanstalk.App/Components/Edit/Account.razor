@@ -173,7 +173,7 @@
                     
                     <div class="mb-4 flex gap-3">
                         <button class="btn-secondary" type="button" @onclick="ShowRegenerateRecoveryCodes">Regenerate Recovery Codes</button>
-                        <button class="px-6 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors" type="button" @onclick="ShowDisableTwoFactor">Disable 2FA</button>
+                        <button class="px-6 py-3 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors" type="button" @onclick="ShowDisableTwoFactor">Disable 2FA</button>
                     </div>
                     
                     @if (_showRegenerateCodes)
@@ -206,7 +206,7 @@
                             else
                             {
                                 <div class="flex gap-3">
-                                    <button class="px-6 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors" type="button" @onclick="RegenerateRecoveryCodes">Generate New Codes</button>
+                                    <button class="px-6 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors" type="button" @onclick="RegenerateRecoveryCodes">Generate New Codes</button>
                                     <button class="btn-secondary" type="button" @onclick="CloseRegenerateCodes">Cancel</button>
                                 </div>
                             }
@@ -234,7 +234,7 @@
                                 </div>
                                 
                                 <div class="flex gap-3">
-                                    <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Disable 2FA</button>
+                                    <button class="px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Disable 2FA</button>
                                     <button class="btn-secondary" type="button" @onclick="CancelDisable2FA">Cancel</button>
                                 </div>
                             </EditForm>
@@ -256,7 +256,7 @@
                 }
                 else if (!_showDeleteConfirmation)
                 {
-                    <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="button" @onclick="ShowDeleteConfirmation">Delete Account</button>
+                    <button class="px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="button" @onclick="ShowDeleteConfirmation">Delete Account</button>
                 }
                 else
                 {
@@ -279,7 +279,7 @@
                         </div>
                         
                         <div class="flex gap-3">
-                            <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Delete My Account</button>
+                            <button class="px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors" type="submit">Yes, Delete My Account</button>
                             <button class="btn-secondary" type="button" @onclick="CancelDelete">Cancel</button>
                         </div>
                     </EditForm>
