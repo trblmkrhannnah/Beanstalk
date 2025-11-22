@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,8 @@ public sealed class ProfileDisplayModelFactory
         
         var user = await context.Users.FirstOrDefaultAsync(u => u.UserName!.ToLower() == username.ToLower(), cancellationToken: cancellationToken);
 
-        if (user is not { IsEnabled: true })
+        // Check if user exists, profile is published, and account is not locked
+        if (user is not { IsPublished: true } || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
             return null;
 
         var contextProfile = await context.UserProfiles

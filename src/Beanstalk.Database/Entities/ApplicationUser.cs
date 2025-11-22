@@ -5,5 +5,5 @@ namespace Beanstalk.Database.Entities;
 
 public class ApplicationUser : IdentityUser<Guid>
 {
-    public bool IsEnabled { get; set; } = true;
+    public bool IsPublished { get; set; } = true;
 }

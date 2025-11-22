@@ -158,7 +158,7 @@ else
         }
 
         // Create user (UserManager handles its own transaction)
-        var user = new ApplicationUser { UserName = username, IsEnabled = true };
+        var user = new ApplicationUser { UserName = username, IsPublished = true };
         var result = await UserManager.CreateAsync(user, Model.Password);
         if (!result.Succeeded)
         {

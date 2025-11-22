@@ -38,8 +38,8 @@
                         <div class="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <InputCheckbox
                                 class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
-                                id="enabled" @bind-Value="Model.UserEnabled"/>
-                            <label class="ml-3 text-sm font-medium text-gray-700 cursor-pointer" for="enabled">Enable
+                                id="enabled" @bind-Value="Model.ProfilePublished"/>
+                            <label class="ml-3 text-sm font-medium text-gray-700 cursor-pointer" for="enabled">Publish
                                 my profile page</label>
                         </div>
                         <div>
@@ -95,7 +95,7 @@
             {
                 Model = new();
 
-                Model.UserEnabled = _user.IsEnabled;
+                Model.ProfilePublished = _user.IsPublished;
                 Model.DisplayName = profile?.DisplayName;
                 Model.Bio = profile?.Bio;
             }
@@ -109,15 +109,15 @@
         if (_user == null)
             return;
 
-        // Update user enabled status
+        // Update user published status
         var userToUpdate = await UserManager.FindByIdAsync(_user.Id.ToString());
         if (userToUpdate != null)
         {
-            userToUpdate.IsEnabled = Model.UserEnabled;
+            userToUpdate.IsPublished = Model.ProfilePublished;
             await UserManager.UpdateAsync(userToUpdate);
 
             // Update our local reference
-            _user.IsEnabled = Model.UserEnabled;
+            _user.IsPublished = Model.ProfilePublished;
         }
 
         // Update profile
@@ -141,7 +141,7 @@
 
     private class DashboardModel
     {
-        public bool UserEnabled { get; set; }
+        public bool ProfilePublished { get; set; }
         public string? DisplayName { get; set; }
         public string? Bio { get; set; }
     }

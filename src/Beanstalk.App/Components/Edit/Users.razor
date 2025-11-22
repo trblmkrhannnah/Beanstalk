@@ -53,13 +53,17 @@
                                         {
                                             <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Admin</span>
                                         }
-                                        @if (userInfo.User.IsEnabled)
+                                        @if (userInfo.User.IsPublished)
                                         {
-                                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Enabled</span>
+                                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Published</span>
                                         }
                                         else
                                         {
-                                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Disabled</span>
+                                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unpublished</span>
+                                        }
+                                        @if (userInfo.IsLocked)
+                                        {
+                                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Locked</span>
                                         }
                                     </div>
                                 </div>
@@ -79,12 +83,23 @@
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" 
                                                    class="sr-only peer" 
-                                                   checked="@userInfo.User.IsEnabled"
+                                                   checked="@userInfo.User.IsPublished"
                                                    disabled="@isCurrentUser"
-                                                   @onchange="@(e => ToggleEnabledAsync(userInfo.User, e.Value as bool? ?? false))" />
+                                                   @onchange="@(e => TogglePublishedAsync(userInfo.User, e.Value as bool? ?? false))" />
                                             <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                                         </label>
-                                        <span class="text-sm text-gray-700">Enabled</span>
+                                        <span class="text-sm text-gray-700">Published</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" 
+                                                   class="sr-only peer" 
+                                                   checked="@(!userInfo.IsLocked)"
+                                                   disabled="@isCurrentUser"
+                                                   @onchange="@(e => ToggleLockedAsync(userInfo.User, !(e.Value as bool? ?? false)))" />
+                                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                        </label>
+                                        <span class="text-sm text-gray-700">Active</span>
                                     </div>
                                     <button class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                                             @onclick="@(() => DeleteUserAsync(userInfo.User))"
@@ -145,29 +160,67 @@
             _users.Add(new UserInfo
             {
                 User = user,
-                IsAdmin = roles.Contains("Admin")
+                IsAdmin = roles.Contains("Admin"),
+                IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow
             });
         }
 
         _loading = false;
     }
 
-    private async Task ToggleEnabledAsync(ApplicationUser user, bool enabled)
+    private async Task TogglePublishedAsync(ApplicationUser user, bool published)
     {
         if (user.Id == _currentUserId)
         {
-            _message = "You cannot disable your own account.";
+            _message = "You cannot change your own published status.";
             _messageIsError = true;
             return;
         }
 
-        user.IsEnabled = enabled;
+        user.IsPublished = published;
         var result = await UserManager.UpdateAsync(user);
         
         if (result.Succeeded)
         {
-            _message = $"User '{user.UserName}' has been {(enabled ? "enabled" : "disabled")}.";
+            _message = $"User '{user.UserName}' profile has been {(published ? "published" : "unpublished")}.";
             _messageIsError = false;
+        }
+        else
+        {
+            _message = $"Failed to update user: {string.Join("; ", result.Errors.Select(e => e.Description))}";
+            _messageIsError = true;
+            await LoadUsersAsync(); // Reload to reset UI
+        }
+    }
+
+    private async Task ToggleLockedAsync(ApplicationUser user, bool locked)
+    {
+        if (user.Id == _currentUserId)
+        {
+            _message = "You cannot lock your own account.";
+            _messageIsError = true;
+            return;
+        }
+
+        if (locked)
+        {
+            // Lock the account and unpublish profile
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            user.IsPublished = false;
+        }
+        else
+        {
+            // Unlock the account (don't automatically publish)
+            user.LockoutEnd = null;
+        }
+
+        var result = await UserManager.UpdateAsync(user);
+        
+        if (result.Succeeded)
+        {
+            _message = $"User '{user.UserName}' has been {(locked ? "locked" : "unlocked")}.";
+            _messageIsError = false;
+            await LoadUsersAsync(); // Reload to update UI
         }
         else
         {
@@ -261,6 +314,7 @@
     {
         public ApplicationUser User { get; set; } = null!;
         public bool IsAdmin { get; set; }
+        public bool IsLocked { get; set; }
     }
 }
 

@@ -24,7 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<ApplicationUser>(entity => { entity.Property(u => u.IsEnabled).HasDefaultValue(true); });
+        builder.Entity<ApplicationUser>(entity => { entity.Property(u => u.IsPublished).HasDefaultValue(true); });
 
         builder.Entity<UserProfile>(entity =>
         {
