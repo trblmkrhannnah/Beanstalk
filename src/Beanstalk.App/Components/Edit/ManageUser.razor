@@ -32,33 +32,24 @@
 
                 @if (!string.IsNullOrEmpty(_message))
                 {
-                    <div class="p-4 @(_messageIsError ? "bg-red-50 border-2 border-red-200 text-red-700" : "bg-green-50 border-2 border-green-200 text-green-700") rounded-2xl mb-6" role="alert">
+                    <div
+                        class="p-4 @(_messageIsError ? "bg-red-50 border-2 border-red-200 text-red-700" : "bg-green-50 border-2 border-green-200 text-green-700") rounded-2xl mb-6"
+                        role="alert">
                         @_message
                     </div>
                 }
 
-                <!-- User Information -->
-                <div class="card-cute mb-6">
-                    <h5 class="text-xl font-semibold mb-4 text-gray-800">User Information</h5>
-                    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3">
-                        <dt class="font-medium text-gray-700">Username</dt>
-                        <dd class="sm:col-span-2 text-gray-900">@_managedUser.UserName</dd>
-
-                        <dt class="font-medium text-gray-700">User ID</dt>
-                        <dd class="sm:col-span-2"><code class="px-2 py-1 bg-gray-100 rounded text-sm">@_managedUser.Id</code></dd>
-                    </dl>
-                </div>
-
                 <!-- Role Management -->
                 <div class="card-cute mb-6">
                     <h5 class="text-xl font-semibold mb-4 text-gray-800">Role Management</h5>
-                    
+
                     <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 mb-4">
                         <dt class="font-medium text-gray-700">Current Role</dt>
                         <dd class="sm:col-span-2">
                             @if (_isAdmin)
                             {
-                                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">Admin</span>
+                                <span
+                                    class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">Admin</span>
                             }
                             else
                             {
@@ -80,7 +71,9 @@
                                 <option value="Admin">Admin</option>
                             </select>
                         </div>
-                        <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="ChangeRoleAsync">
+                        <button
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                            type="button" @onclick="ChangeRoleAsync">
                             Change Role
                         </button>
                         <p class="text-gray-600 text-sm mt-2 mb-0">
@@ -92,7 +85,7 @@
                 <!-- Account Access -->
                 <div class="card-cute mb-6">
                     <h5 class="text-xl font-semibold mb-4 text-gray-800">Account Access</h5>
-                    
+
                     <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 mb-4">
                         <dt class="font-medium text-gray-700">Account Status</dt>
                         <dd class="sm:col-span-2">
@@ -111,7 +104,9 @@
                     {
                         @if (_isLocked)
                         {
-                            <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="ShowUnlockOptions">
+                            <button
+                                class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                type="button" @onclick="ShowUnlockOptions">
                                 Unlock Account
                             </button>
                             <p class="text-gray-600 text-sm mt-2 mb-0">
@@ -120,25 +115,33 @@
                         }
                         else
                         {
-                            <button class="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors" type="button" @onclick="ShowLockConfirmation">
+                            <button
+                                class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                type="button" @onclick="ShowLockConfirmation">
                                 Lock Account
                             </button>
                             <p class="text-gray-600 text-sm mt-2 mb-0">
-                                Locking will prevent this user from logging in and will automatically unpublish their profile.
+                                Locking will prevent this user from logging in and will automatically unpublish their
+                                profile.
                             </p>
                         }
                     }
                     else if (_showLockConfirmation)
                     {
                         <div class="p-4 bg-orange-50 border-2 border-orange-200 rounded-2xl mb-4">
-                            <strong class="text-orange-800">Confirm Lock:</strong> 
-                            <span class="text-orange-700">Are you sure you want to lock the account for @_managedUser.UserName? This will prevent them from logging in and unpublish their profile.</span>
+                            <strong class="text-orange-800">Confirm Lock:</strong>
+                            <span
+                                class="text-orange-700">Are you sure you want to lock the account for @_managedUser.UserName? This will prevent them from logging in and unpublish their profile.</span>
                         </div>
                         <div class="flex gap-2">
-                            <button class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors" type="button" @onclick="LockAccountAsync">
+                            <button
+                                class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                type="button" @onclick="LockAccountAsync">
                                 Yes, Lock Account
                             </button>
-                            <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors" type="button" @onclick="CancelLockUnlock">
+                            <button
+                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                type="button" @onclick="CancelLockUnlock">
                                 Cancel
                             </button>
                         </div>
@@ -146,20 +149,27 @@
                     else if (_showUnlockOptions)
                     {
                         <div class="p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl mb-4">
-                            <strong class="text-blue-800">Unlock Account:</strong> 
-                            <span class="text-blue-700">Would you like to also publish their profile when unlocking?</span>
+                            <strong class="text-blue-800">Unlock Account:</strong>
+                            <span
+                                class="text-blue-700">Would you like to also publish their profile when unlocking?</span>
                         </div>
                         <div class="flex items-center gap-2 mb-4">
-                            <input type="checkbox" id="publish-on-unlock" class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" @bind="_publishOnUnlock"/>
+                            <input type="checkbox" id="publish-on-unlock"
+                                   class="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
+                                   @bind="_publishOnUnlock"/>
                             <label for="publish-on-unlock" class="text-sm font-medium text-gray-700 cursor-pointer">
                                 Publish profile when unlocking
                             </label>
                         </div>
                         <div class="flex gap-2">
-                            <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="UnlockAccountAsync">
+                            <button
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                                type="button" @onclick="UnlockAccountAsync">
                                 Unlock Account
                             </button>
-                            <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors" type="button" @onclick="CancelLockUnlock">
+                            <button
+                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                type="button" @onclick="CancelLockUnlock">
                                 Cancel
                             </button>
                         </div>
@@ -169,7 +179,7 @@
                 <!-- Profile Visibility -->
                 <div class="card-cute mb-6">
                     <h5 class="text-xl font-semibold mb-4 text-gray-800">Profile Visibility</h5>
-                    
+
                     <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 mb-4">
                         <dt class="font-medium text-gray-700">Profile Status</dt>
                         <dd class="sm:col-span-2">
@@ -195,13 +205,17 @@
                         <div class="flex gap-2">
                             @if (_isPublished)
                             {
-                                <button class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors" type="button" @onclick="UnpublishProfileAsync">
+                                <button
+                                    class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+                                    type="button" @onclick="UnpublishProfileAsync">
                                     Unpublish Profile
                                 </button>
                             }
                             else
                             {
-                                <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="PublishProfileAsync">
+                                <button
+                                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                                    type="button" @onclick="PublishProfileAsync">
                                     Publish Profile
                                 </button>
                             }
@@ -222,7 +236,7 @@
                 <!-- Two-Factor Authentication -->
                 <div class="card-cute mb-6">
                     <h5 class="text-xl font-semibold mb-4 text-gray-800">Two-Factor Authentication</h5>
-                    
+
                     <dl class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 mb-4">
                         <dt class="font-medium text-gray-700">2FA Status</dt>
                         <dd class="sm:col-span-2">
@@ -241,24 +255,31 @@
                     {
                         @if (!_showResetConfirmation)
                         {
-                            <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="ShowResetConfirmation">
+                            <button
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                                type="button" @onclick="ShowResetConfirmation">
                                 Reset Two-Factor Authentication
                             </button>
                             <p class="text-gray-600 text-sm mt-2 mb-0">
-                                This will disable 2FA for this user and clear their authenticator settings. The user will need to set up 2FA again if they wish to re-enable it.
+                                This will disable 2FA for this user and clear their authenticator settings. The user
+                                will need to set up 2FA again if they wish to re-enable it.
                             </p>
                         }
                         else
                         {
                             <div class="p-4 bg-orange-50 border-2 border-orange-200 rounded-2xl mb-4">
-                                <strong class="text-orange-800">Confirm Reset:</strong> 
+                                <strong class="text-orange-800">Confirm Reset:</strong>
                                 <span class="text-orange-700">Are you sure you want to reset two-factor authentication for @_managedUser.UserName? This action cannot be undone.</span>
                             </div>
                             <div class="flex gap-2">
-                                <button class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors" type="button" @onclick="ResetTwoFactorAsync">
+                                <button
+                                    class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+                                    type="button" @onclick="ResetTwoFactorAsync">
                                     Yes, Reset 2FA
                                 </button>
-                                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors" type="button" @onclick="CancelReset">
+                                <button
+                                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                    type="button" @onclick="CancelReset">
                                     Cancel
                                 </button>
                             </div>
@@ -266,68 +287,128 @@
                     }
                     else
                     {
-                        <p class="text-gray-600 text-sm mb-0">This user does not have two-factor authentication enabled.</p>
+                        <p class="text-gray-600 text-sm mb-0">This user does not have two-factor authentication
+                            enabled.</p>
                     }
                 </div>
 
                 <!-- Password Reset -->
                 <div class="card-cute mb-6">
                     <h5 class="text-xl font-semibold mb-4 text-gray-800">Password Management</h5>
-                    
+
                     @if (!_showPasswordReset)
                     {
                         <p class="text-gray-600 mb-4">Reset the user's password to a new value.</p>
-                        <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" type="button" @onclick="ShowPasswordReset">
+                        <button
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                            type="button" @onclick="ShowPasswordReset">
                             Reset Password
                         </button>
                     }
                     else
                     {
-                        <EditForm Model="PasswordResetModel" OnValidSubmit="ResetPasswordAsync" Context="passwordForm" class="space-y-4">
+                        <EditForm Model="PasswordResetModel" OnValidSubmit="ResetPasswordAsync" Context="passwordForm"
+                                  class="space-y-4">
                             <DataAnnotationsValidator/>
                             <ValidationSummary class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700"/>
-                            
+
                             @if (!string.IsNullOrEmpty(_passwordResetError))
                             {
-                                <div class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700">@_passwordResetError</div>
+                                <div
+                                    class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700">@_passwordResetError</div>
                             }
-                            
+
                             @if (_passwordResetSuccess)
                             {
                                 <div class="p-4 bg-green-50 border-2 border-green-200 rounded-2xl text-green-700">
-                                    <strong>Password reset successfully!</strong> The user can now log in with the new password.
+                                    <strong>Password reset successfully!</strong> The user can now log in with the new
+                                    password.
                                 </div>
                             }
-                            
+
                             <div>
-                                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                <InputText id="new-password" type="password" class="input-cute" @bind-Value="PasswordResetModel.NewPassword"/>
-                                <small class="text-gray-600 text-sm">Password must be at least 6 characters long.</small>
+                                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-2">New
+                                    Password</label>
+                                <InputText id="new-password" type="password" class="input-cute"
+                                           @bind-Value="PasswordResetModel.NewPassword"/>
+                                <small class="text-gray-600 text-sm">Password must be at least 6 characters
+                                    long.</small>
                             </div>
-                            
+
                             <div>
-                                <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                                <InputText id="confirm-password" type="password" class="input-cute" @bind-Value="PasswordResetModel.ConfirmPassword"/>
+                                <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">Confirm
+                                    New Password</label>
+                                <InputText id="confirm-password" type="password" class="input-cute"
+                                           @bind-Value="PasswordResetModel.ConfirmPassword"/>
                             </div>
-                            
+
                             <div class="flex gap-2">
-                                <button class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors" type="submit">Reset Password</button>
-                                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors" type="button" @onclick="CancelPasswordReset">Cancel</button>
+                                <button
+                                    class="px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+                                    type="submit">Reset Password
+                                </button>
+                                <button
+                                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                    type="button" @onclick="CancelPasswordReset">Cancel
+                                </button>
                             </div>
                         </EditForm>
+                    }
+                </div>
+
+                <!-- Delete Account -->
+                <div class="card-cute mb-6">
+                    <h5 class="text-xl font-semibold mb-4 text-gray-800">Delete Account</h5>
+
+                    @if (_isSelfManagement)
+                    {
+                        <p class="text-gray-600 text-sm mb-0">You cannot delete your own account.</p>
+                    }
+                    else
+                    {
+                        @if (!_showDeleteConfirmation)
+                        {
+                            <p class="text-gray-600 mb-4">Permanently delete this user account. This action cannot be undone.</p>
+                            <button
+                                class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                type="button" @onclick="ShowDeleteConfirmation">
+                                Delete Account
+                            </button>
+                            <p class="text-gray-600 text-sm mt-2 mb-0">
+                                <strong>Warning:</strong> Deleting this account will permanently remove all user data and cannot be reversed.
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl mb-4">
+                                <strong class="text-red-800">Confirm Deletion:</strong>
+                                <span class="text-red-700">Are you sure you want to permanently delete the account for @_managedUser.UserName? This action cannot be undone and will remove all user data.</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                                    type="button" @onclick="DeleteAccountAsync">
+                                    Yes, Delete Account
+                                </button>
+                                <button
+                                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                    type="button" @onclick="CancelDelete">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
                     }
                 </div>
             }
         </Authorized>
         <NotAuthorized>
-            <NotAuthorised />
+            <NotAuthorised/>
         </NotAuthorized>
     </AuthorizeView>
 </CascadingAuthenticationState>
 
 @code {
-    [Parameter]
-    public Guid UserId { get; set; }
+    [Parameter] public Guid UserId { get; set; }
 
     private ApplicationUser? _managedUser;
     private bool _loading = true;
@@ -343,11 +424,12 @@
     private bool _showLockConfirmation;
     private bool _showUnlockOptions;
     private bool _publishOnUnlock;
+    private bool _showDeleteConfirmation;
     private string? _passwordResetError;
     private bool _passwordResetSuccess;
     private string _selectedRole = "User";
     private Guid _currentUserId;
-    
+
     private ResetPasswordModel PasswordResetModel { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -358,7 +440,7 @@
         {
             _currentUserId = currentUser.Id;
         }
-        
+
         await LoadUserAsync();
     }
 
@@ -375,6 +457,7 @@
         _showPasswordReset = false;
         _showLockConfirmation = false;
         _showUnlockOptions = false;
+        _showDeleteConfirmation = false;
         _passwordResetError = null;
         _passwordResetSuccess = false;
         _publishOnUnlock = false;
@@ -440,9 +523,9 @@
             // Lock the account and unpublish profile
             _managedUser.LockoutEnd = DateTimeOffset.MaxValue;
             _managedUser.IsPublished = false;
-            
+
             var result = await UserManager.UpdateAsync(_managedUser);
-            
+
             if (result.Succeeded)
             {
                 _isLocked = true;
@@ -479,15 +562,15 @@
         {
             // Unlock the account
             _managedUser.LockoutEnd = null;
-            
+
             // Optionally publish profile
             if (_publishOnUnlock)
             {
                 _managedUser.IsPublished = true;
             }
-            
+
             var result = await UserManager.UpdateAsync(_managedUser);
-            
+
             if (result.Succeeded)
             {
                 _isLocked = false;
@@ -524,7 +607,7 @@
         {
             _managedUser.IsPublished = true;
             var result = await UserManager.UpdateAsync(_managedUser);
-            
+
             if (result.Succeeded)
             {
                 _isPublished = true;
@@ -559,7 +642,7 @@
         {
             _managedUser.IsPublished = false;
             var result = await UserManager.UpdateAsync(_managedUser);
-            
+
             if (result.Succeeded)
             {
                 _isPublished = false;
@@ -594,7 +677,7 @@
         {
             // Disable 2FA
             await UserManager.SetTwoFactorEnabledAsync(_managedUser, false);
-            
+
             // Reset the authenticator key
             await UserManager.ResetAuthenticatorKeyAsync(_managedUser);
 
@@ -652,7 +735,7 @@
         {
             // Remove the existing password
             var removePasswordResult = await UserManager.RemovePasswordAsync(_managedUser);
-            
+
             if (!removePasswordResult.Succeeded)
             {
                 _passwordResetError = $"Failed to reset password: {string.Join("; ", removePasswordResult.Errors.Select(e => e.Description))}";
@@ -661,7 +744,7 @@
 
             // Add the new password
             var addPasswordResult = await UserManager.AddPasswordAsync(_managedUser, PasswordResetModel.NewPassword);
-            
+
             if (!addPasswordResult.Succeeded)
             {
                 _passwordResetError = $"Failed to set new password: {string.Join("; ", addPasswordResult.Errors.Select(e => e.Description))}";
@@ -709,7 +792,7 @@
 
             // Get current roles
             var currentRoles = await UserManager.GetRolesAsync(_managedUser);
-            
+
             // Remove from all roles
             if (currentRoles.Count > 0)
             {
@@ -736,7 +819,7 @@
 
             _message = $"User '{_managedUser.UserName}' role changed to {_selectedRole}.";
             _messageIsError = false;
-            
+
             // Reload user data to refresh role badge
             await LoadUserAsync();
         }
@@ -744,6 +827,58 @@
         {
             _message = "An error occurred while changing the user role. Please try again.";
             _messageIsError = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private void ShowDeleteConfirmation()
+    {
+        _showDeleteConfirmation = true;
+        _message = null;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirmation = false;
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        if (_managedUser == null)
+        {
+            _message = "User not found.";
+            _messageIsError = true;
+            return;
+        }
+
+        if (_isSelfManagement)
+        {
+            _message = "You cannot delete your own account.";
+            _messageIsError = true;
+            return;
+        }
+
+        try
+        {
+            var result = await UserManager.DeleteAsync(_managedUser);
+
+            if (result.Succeeded)
+            {
+                Nav.NavigateTo("/edit/users");
+            }
+            else
+            {
+                _message = $"Failed to delete account: {string.Join("; ", result.Errors.Select(e => e.Description))}";
+                _messageIsError = true;
+                _showDeleteConfirmation = false;
+            }
+        }
+        catch (Exception)
+        {
+            _message = "An error occurred while deleting the account. Please try again.";
+            _messageIsError = true;
+            _showDeleteConfirmation = false;
         }
 
         StateHasChanged();
@@ -759,5 +894,6 @@
         [Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
+
 }
 

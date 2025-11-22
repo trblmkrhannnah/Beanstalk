@@ -10,9 +10,9 @@
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <CascadingAuthenticationState>
     <AuthorizeView Roles="Admin">
@@ -37,21 +37,17 @@
                     @foreach (var userInfo in _users)
                     {
                         var isCurrentUser = userInfo.User.Id == _currentUserId;
-                        <div class="card-cute">
+                        <div class="card-cute relative">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <!-- Left: User Info -->
-                                    <div class="flex-1">
+                                <!-- Left: User Info (Clickable) -->
+                                <div class="flex-1 cursor-pointer" @onclick="@(() => NavigateToManageUser(userInfo.User.Id))">
                                     <div class="flex items-center gap-3 mb-3">
-                                        <a href="/edit/manage-user/@userInfo.User.Id" class="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors">
+                                        <span class="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors">
                                             @userInfo.User.UserName
-                                        </a>
-                                        @if (isCurrentUser)
+                                        </span>
+                                        @if (userInfo.IsLocked)
                                         {
-                                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">You</span>
-                                        }
-                                        @if (userInfo.IsAdmin)
-                                        {
-                                            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Admin</span>
+                                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Locked</span>
                                         }
                                         @if (userInfo.User.IsPublished)
                                         {
@@ -61,51 +57,91 @@
                                         {
                                             <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unpublished</span>
                                         }
-                                        @if (userInfo.IsLocked)
+                                        @if (userInfo.IsAdmin)
                                         {
-                                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Locked</span>
+                                            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Admin</span>
+                                        }
+                                        @if (isCurrentUser)
+                                        {
+                                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">You</span>
                                         }
                                     </div>
                                 </div>
 
-                                <!-- Right: Controls -->
-                                <div class="flex flex-col md:flex-row items-start md:items-center gap-3 flex-shrink-0">
-                                    <div class="flex items-center gap-2">
-                                        <label class="text-sm font-medium text-gray-700">Role:</label>
-                                        <select class="input-cute text-sm w-32" 
-                                                @onchange="@(e => ChangeRoleAsync(userInfo.User, e.Value?.ToString() ?? "User"))"
-                                                disabled="@isCurrentUser">
-                                            <option value="User" selected="@(!userInfo.IsAdmin)">User</option>
-                                            <option value="Admin" selected="@userInfo.IsAdmin">Admin</option>
-                                        </select>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" 
-                                                   class="sr-only peer" 
-                                                   checked="@userInfo.User.IsPublished"
-                                                   disabled="@isCurrentUser"
-                                                   @onchange="@(e => TogglePublishedAsync(userInfo.User, e.Value as bool? ?? false))" />
-                                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                        </label>
-                                        <span class="text-sm text-gray-700">Published</span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" 
-                                                   class="sr-only peer" 
-                                                   checked="@(!userInfo.IsLocked)"
-                                                   disabled="@isCurrentUser"
-                                                   @onchange="@(e => ToggleLockedAsync(userInfo.User, !(e.Value as bool? ?? false)))" />
-                                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                        </label>
-                                        <span class="text-sm text-gray-700">Active</span>
-                                    </div>
-                                    <button class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                                            @onclick="@(() => DeleteUserAsync(userInfo.User))"
-                                            disabled="@isCurrentUser">
-                                        Delete
+                                <!-- Right: Dropdown Menu -->
+                                <div class="flex-shrink-0 relative">
+                                    <button @onclick="@(() => ToggleDropdown(userInfo.User.Id))" 
+                                            @onclick:stopPropagation="true"
+                                            class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                        </svg>
                                     </button>
+                                    
+                                    @if (_openDropdowns.ContainsKey(userInfo.User.Id) && _openDropdowns[userInfo.User.Id])
+                                    {
+                                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                             @onclick:stopPropagation="true">
+                                            <div class="py-1">
+                                                <button @onclick="@(() => ViewProfile(userInfo.User.UserName!))"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                    </svg>
+                                                    View Profile
+                                                </button>
+                                                <button @onclick="@(() => NavigateToManageUser(userInfo.User.Id))"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <hr class="my-1 border-gray-200" />
+                                                <button @onclick="@(() => ToggleLockedWithConfirmationAsync(userInfo.User, !userInfo.IsLocked))"
+                                                        disabled="@isCurrentUser"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        @if (userInfo.IsLocked)
+                                                        {
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                                                        }
+                                                        else
+                                                        {
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                        }
+                                                    </svg>
+                                                    @(userInfo.IsLocked ? "Enable" : "Disable")
+                                                </button>
+                                                <button @onclick="@(() => TogglePublishedWithConfirmationAsync(userInfo.User, !userInfo.User.IsPublished))"
+                                                        disabled="@isCurrentUser"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        @if (userInfo.User.IsPublished)
+                                                        {
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                                        }
+                                                        else
+                                                        {
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                        }
+                                                    </svg>
+                                                    @(userInfo.User.IsPublished ? "Unpublish" : "Publish")
+                                                </button>
+                                                <hr class="my-1 border-gray-200" />
+                                                <button @onclick="@(() => DeleteUserWithConfirmationAsync(userInfo.User))"
+                                                        disabled="@isCurrentUser"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -132,6 +168,7 @@
     private string? _message;
     private bool _messageIsError;
     private Guid _currentUserId;
+    private Dictionary<Guid, bool> _openDropdowns = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,22 +205,70 @@
         _loading = false;
     }
 
-    private async Task TogglePublishedAsync(ApplicationUser user, bool published)
+    private void ToggleDropdown(Guid userId)
+    {
+        // Close all other dropdowns
+        var wasOpen = _openDropdowns.ContainsKey(userId) && _openDropdowns[userId];
+        _openDropdowns.Clear();
+        
+        // Toggle the clicked dropdown
+        _openDropdowns[userId] = !wasOpen;
+    }
+
+    private void NavigateToManageUser(Guid userId)
+    {
+        NavigationManager.NavigateTo($"/edit/manage-user/{userId}");
+    }
+
+    private void ViewProfile(string username)
+    {
+        NavigationManager.NavigateTo($"/{username}");
+    }
+
+    private async Task TogglePublishedWithConfirmationAsync(ApplicationUser user, bool publish)
     {
         if (user.Id == _currentUserId)
         {
             _message = "You cannot change your own published status.";
             _messageIsError = true;
+            _openDropdowns.Clear();
             return;
         }
 
-        user.IsPublished = published;
-        var result = await UserManager.UpdateAsync(user);
+        var action = publish ? "publish" : "unpublish";
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to {action} the profile for '{user.UserName}'?");
+        
+        if (!confirmed)
+        {
+            _openDropdowns.Clear();
+            return;
+        }
+
+        await TogglePublishedAsync(user, publish);
+        _openDropdowns.Clear();
+    }
+
+    private async Task TogglePublishedAsync(ApplicationUser user, bool published)
+    {
+        // Fetch fresh instance to avoid tracking conflicts
+        var freshUser = await UserManager.FindByIdAsync(user.Id.ToString());
+        if (freshUser == null)
+        {
+            _message = "User not found.";
+            _messageIsError = true;
+            await LoadUsersAsync();
+            return;
+        }
+
+        freshUser.IsPublished = published;
+        var result = await UserManager.UpdateAsync(freshUser);
         
         if (result.Succeeded)
         {
-            _message = $"User '{user.UserName}' profile has been {(published ? "published" : "unpublished")}.";
+            _message = $"User '{freshUser.UserName}' profile has been {(published ? "published" : "unpublished")}.";
             _messageIsError = false;
+            await LoadUsersAsync();
         }
         else
         {
@@ -193,32 +278,59 @@
         }
     }
 
-    private async Task ToggleLockedAsync(ApplicationUser user, bool locked)
+    private async Task ToggleLockedWithConfirmationAsync(ApplicationUser user, bool locked)
     {
         if (user.Id == _currentUserId)
         {
             _message = "You cannot lock your own account.";
             _messageIsError = true;
+            _openDropdowns.Clear();
+            return;
+        }
+
+        var action = locked ? "disable" : "enable";
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to {action} the account for '{user.UserName}'?");
+        
+        if (!confirmed)
+        {
+            _openDropdowns.Clear();
+            return;
+        }
+
+        await ToggleLockedAsync(user, locked);
+        _openDropdowns.Clear();
+    }
+
+    private async Task ToggleLockedAsync(ApplicationUser user, bool locked)
+    {
+        // Fetch fresh instance to avoid tracking conflicts
+        var freshUser = await UserManager.FindByIdAsync(user.Id.ToString());
+        if (freshUser == null)
+        {
+            _message = "User not found.";
+            _messageIsError = true;
+            await LoadUsersAsync();
             return;
         }
 
         if (locked)
         {
             // Lock the account and unpublish profile
-            user.LockoutEnd = DateTimeOffset.MaxValue;
-            user.IsPublished = false;
+            freshUser.LockoutEnd = DateTimeOffset.MaxValue;
+            freshUser.IsPublished = false;
         }
         else
         {
             // Unlock the account (don't automatically publish)
-            user.LockoutEnd = null;
+            freshUser.LockoutEnd = null;
         }
 
-        var result = await UserManager.UpdateAsync(user);
+        var result = await UserManager.UpdateAsync(freshUser);
         
         if (result.Succeeded)
         {
-            _message = $"User '{user.UserName}' has been {(locked ? "locked" : "unlocked")}.";
+            _message = $"User '{freshUser.UserName}' has been {(locked ? "disabled" : "enabled")}.";
             _messageIsError = false;
             await LoadUsersAsync(); // Reload to update UI
         }
@@ -230,60 +342,13 @@
         }
     }
 
-    private async Task ChangeRoleAsync(ApplicationUser user, string newRole)
-    {
-        if (user.Id == _currentUserId)
-        {
-            _message = "You cannot change your own role.";
-            _messageIsError = true;
-            return;
-        }
-
-        // Ensure the Admin role exists
-        const string adminRole = "Admin";
-        if (!await RoleManager.RoleExistsAsync(adminRole))
-        {
-            await RoleManager.CreateAsync(new IdentityRole<Guid>(adminRole));
-        }
-
-        // Get current roles
-        var currentRoles = await UserManager.GetRolesAsync(user);
-        
-        // Remove from all roles
-        if (currentRoles.Count > 0)
-        {
-            var removeResult = await UserManager.RemoveFromRolesAsync(user, currentRoles);
-            if (!removeResult.Succeeded)
-            {
-                _message = $"Failed to remove roles: {string.Join("; ", removeResult.Errors.Select(e => e.Description))}";
-                _messageIsError = true;
-                return;
-            }
-        }
-
-        // Add to new role if it's Admin
-        if (newRole == "Admin")
-        {
-            var addResult = await UserManager.AddToRoleAsync(user, adminRole);
-            if (!addResult.Succeeded)
-            {
-                _message = $"Failed to add role: {string.Join("; ", addResult.Errors.Select(e => e.Description))}";
-                _messageIsError = true;
-                return;
-            }
-        }
-
-        _message = $"User '{user.UserName}' role changed to {newRole}.";
-        _messageIsError = false;
-        await LoadUsersAsync(); // Reload to update UI
-    }
-
-    private async Task DeleteUserAsync(ApplicationUser user)
+    private async Task DeleteUserWithConfirmationAsync(ApplicationUser user)
     {
         if (user.Id == _currentUserId)
         {
             _message = "You cannot delete your own account.";
             _messageIsError = true;
+            _openDropdowns.Clear();
             return;
         }
 
@@ -292,14 +357,31 @@
         
         if (!confirmed)
         {
+            _openDropdowns.Clear();
             return;
         }
 
-        var result = await UserManager.DeleteAsync(user);
+        await DeleteUserAsync(user);
+        _openDropdowns.Clear();
+    }
+
+    private async Task DeleteUserAsync(ApplicationUser user)
+    {
+        // Fetch fresh instance to avoid tracking conflicts
+        var freshUser = await UserManager.FindByIdAsync(user.Id.ToString());
+        if (freshUser == null)
+        {
+            _message = "User not found.";
+            _messageIsError = true;
+            await LoadUsersAsync();
+            return;
+        }
+
+        var result = await UserManager.DeleteAsync(freshUser);
         
         if (result.Succeeded)
         {
-            _message = $"User '{user.UserName}' has been permanently deleted.";
+            _message = $"User '{freshUser.UserName}' has been permanently deleted.";
             _messageIsError = false;
             await LoadUsersAsync(); // Reload to update list
         }
