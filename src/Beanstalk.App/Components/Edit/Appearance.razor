@@ -114,21 +114,14 @@
                             }
                         </div>
 
-                        <!-- Save Button -->
-                        <div class="flex items-center gap-4">
-                            <button type="button" class="btn-primary" @onclick="SaveAsync" disabled="@(!_selectedPaletteId.HasValue || _saved)">
-                                Save Theme
-                            </button>
-                            @if (_saved)
-                            {
-                                <span class="text-green-600 font-medium">Theme saved successfully!</span>
-                            }
-                            else if (_selectedPaletteId.HasValue)
-                            {
-                                var selectedPalette = _palettes.FirstOrDefault(p => p.Id == _selectedPaletteId);
-                                <span class="text-gray-600">Selected: <span class="font-medium">@(selectedPalette?.Name ?? "Unknown")</span></span>
-                            }
-                        </div>
+                        <!-- Status Message -->
+                        @if (_saved)
+                        {
+                            <div class="flex items-center gap-2 text-green-600 font-medium">
+                                <span>✓</span>
+                                <span>Theme saved successfully!</span>
+                            </div>
+                        }
                     }
                 </div>
             }
@@ -184,17 +177,15 @@
         _loading = false;
     }
 
-    private void SelectPalette(Guid paletteId)
-    {
-        _selectedPaletteId = paletteId;
-        _saved = false;
-        StateHasChanged();
-    }
-
-    private async Task SaveAsync()
+    private async Task SelectPalette(Guid paletteId)
     {
         if (_profile == null) return;
 
+        _selectedPaletteId = paletteId;
+        _saved = false;
+        StateHasChanged();
+
+        // Automatically save the selection
         await using var db = await DbFactory.CreateDbContextAsync();
         
         var profileToUpdate = await db.UserProfiles.FindAsync(_profile.Id);
@@ -206,23 +197,5 @@
         
         _saved = true;
         StateHasChanged();
-    }
-
-    private string GetThemeEmoji(string themeName)
-    {
-        return themeName switch
-        {
-            "Ocean Breeze" => "🌊",
-            "Sunset Glow" => "🌅",
-            "Forest Deep" => "🌲",
-            "Midnight Sky" => "🌙",
-            "Cherry Blossom" => "🌸",
-            "Arctic Ice" => "❄️",
-            "Desert Sand" => "🏜️",
-            "Neon Nights" => "🌃",
-            "Autumn Harvest" => "🍂",
-            "Monochrome" => "⚫",
-            _ => "🎨"
-        };
     }
 }
