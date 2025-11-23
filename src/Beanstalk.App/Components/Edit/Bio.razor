@@ -15,23 +15,23 @@
         <Authorized>
             @if (_loading)
             {
-                <p class="text-center text-gray-600 text-lg py-12">Loading dashboard...</p>
+                <p class="text-center text-gray-600 py-5">Loading dashboard...</p>
             }
             else if (Model is null || _user is null)
             {
-                <div class="card-cute text-center py-12">
+                <div class="card-cute text-center py-5">
                     <p class="text-gray-600">Profile not found.</p>
                 </div>
             }
             else
             {
-                <h3 class="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-gray-900">Bio</h3>
-                <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">Edit your presence, title, and bio.</p>
+                <h3 class="h4 fw-bold mb-3 text-gray-900">Bio</h3>
+                <p class="small text-gray-600 mb-4">Edit your presence, title, and bio.</p>
 
                 <div class="card-cute mb-6">
                     <h4 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Profile Settings</h4>
                     <EditForm Model="Model" OnValidSubmit="SaveAsync" FormName="dashboard" method="post"
-                              class="space-y-4">
+                              class="d-flex flex-column gap-3">
                         <DataAnnotationsValidator/>
                         <ValidationSummary
                             class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"/>
@@ -52,7 +52,7 @@
                             <InputTextArea class="input-cute min-h-[100px]" @bind-Value="Model.Bio"
                                            placeholder="Tell visitors about yourself..."/>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
                             <button class="btn-primary" type="submit">Save Changes</button>
                             @if (_saved)
                             {

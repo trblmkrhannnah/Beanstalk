@@ -15,7 +15,7 @@
         <Authorized>
             @if (_loading)
             {
-                <p class="text-center text-gray-600 text-lg py-12">Loading...</p>
+                <p class="text-center text-gray-600 py-5">Loading...</p>
             }
             else if (_managedUser == null)
             {
@@ -24,7 +24,7 @@
             }
             else
             {
-                <div class="mb-6">
+                <div class="mb-4">
                     <a href="/edit/users" class="btn-secondary">← Back to Users</a>
                 </div>
 
@@ -308,7 +308,7 @@
                     else
                     {
                         <EditForm Model="PasswordResetModel" OnValidSubmit="ResetPasswordAsync" Context="passwordForm"
-                                  class="space-y-4">
+                                  class="d-flex flex-column gap-3">
                             <DataAnnotationsValidator/>
                             <ValidationSummary class="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-red-700"/>
 

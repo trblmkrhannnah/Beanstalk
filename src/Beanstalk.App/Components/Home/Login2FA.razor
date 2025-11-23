@@ -5,59 +5,59 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager Nav
 
-<h3 class="text-2xl font-bold mb-6">Two-Factor Authentication</h3>
+<h3 class="h4 fw-bold mb-4">Two-Factor Authentication</h3>
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="p-4 bg-red-50 border border-red-200 rounded text-red-700 mb-4" role="alert">
+    <div class="p-3 bg-red-50 border border-red-200 rounded text-red-700 mb-3" role="alert">
         @_error
     </div>
 }
 
 @if (!UseRecoveryCode)
 {
-    <p class="mb-6 text-gray-700">Enter the verification code from your authenticator app.</p>
+    <p class="mb-4 text-gray-700">Enter the verification code from your authenticator app.</p>
     
-    <EditForm Model="Model" OnValidSubmit="VerifyCodeAsync" FormName="verify2fa" method="post" class="space-y-4">
+    <EditForm Model="Model" OnValidSubmit="VerifyCodeAsync" FormName="verify2fa" method="post">
         <DataAnnotationsValidator />
-        <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700" />
+        <ValidationSummary class="mb-3 p-3 bg-red-50 border border-red-200 rounded text-red-700" />
         
-        <div class="mb-4">
-            <label for="code" class="block text-sm font-medium text-gray-700 mb-2">Authentication Code</label>
-            <InputText id="code" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary focus:border-primary" @bind-Value="Model.Code" placeholder="000000" maxlength="6" />
-            <small class="block mt-1 text-sm text-gray-500">Enter the 6-digit code from your authenticator app.</small>
+        <div class="mb-3">
+            <label for="code" class="form-label small fw-medium text-gray-700">Authentication Code</label>
+            <InputText id="code" class="input-cute" @bind-Value="Model.Code" placeholder="000000" maxlength="6" />
+            <small class="d-block mt-1 small text-gray-500">Enter the 6-digit code from your authenticator app.</small>
         </div>
         
-        <div class="flex items-center mb-4">
-            <InputCheckbox id="remember-device" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary" @bind-Value="Model.RememberDevice" />
-            <label class="ml-2 text-sm font-medium text-gray-700" for="remember-device">
+        <div class="d-flex align-items-center mb-3">
+            <InputCheckbox id="remember-device" class="form-check-input" @bind-Value="Model.RememberDevice" />
+            <label class="form-check-label ms-2 small fw-medium text-gray-700" for="remember-device">
                 Remember this device for 30 days
             </label>
         </div>
         
-        <div class="flex gap-3">
-            <button class="btn-primary px-6 py-2 rounded-md font-medium transition-colors" type="submit">Verify</button>
-            <a href="/home/login-2fa?useRecovery=true@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"&returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn-link px-6 py-2">Use a recovery code instead</a>
+        <div class="d-flex gap-3">
+            <button class="btn-primary rounded" type="submit">Verify</button>
+            <a href="/home/login-2fa?useRecovery=true@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"&returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn btn-link text-decoration-none">Use a recovery code instead</a>
         </div>
     </EditForm>
 }
 else
 {
-    <p class="mb-6 text-gray-700">Enter one of your recovery codes.</p>
+    <p class="mb-4 text-gray-700">Enter one of your recovery codes.</p>
     
-    <EditForm Model="RecoveryModel" OnValidSubmit="VerifyRecoveryCodeAsync" FormName="verifyRecovery" method="post" class="space-y-4">
+    <EditForm Model="RecoveryModel" OnValidSubmit="VerifyRecoveryCodeAsync" FormName="verifyRecovery" method="post">
         <DataAnnotationsValidator />
-        <ValidationSummary class="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700" />
+        <ValidationSummary class="mb-3 p-3 bg-red-50 border border-red-200 rounded text-red-700" />
         
-        <div class="mb-4">
-            <label for="recovery-code" class="block text-sm font-medium text-gray-700 mb-2">Recovery Code</label>
-            <InputText id="recovery-code" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary focus:border-primary" @bind-Value="RecoveryModel.RecoveryCode" />
-            <small class="block mt-1 text-sm text-gray-500">Recovery codes are case-sensitive and can only be used once.</small>
+        <div class="mb-3">
+            <label for="recovery-code" class="form-label small fw-medium text-gray-700">Recovery Code</label>
+            <InputText id="recovery-code" class="input-cute" @bind-Value="RecoveryModel.RecoveryCode" />
+            <small class="d-block mt-1 small text-gray-500">Recovery codes are case-sensitive and can only be used once.</small>
         </div>
         
-        <div class="flex gap-3">
-            <button class="btn-primary px-6 py-2 rounded-md font-medium transition-colors" type="submit">Verify</button>
-            <a href="/home/login-2fa@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn-link px-6 py-2">Use authenticator code instead</a>
+        <div class="d-flex gap-3">
+            <button class="btn-primary rounded" type="submit">Verify</button>
+            <a href="/home/login-2fa@(string.IsNullOrEmpty(ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(ReturnUrl)}")" class="btn btn-link text-decoration-none">Use authenticator code instead</a>
         </div>
     </EditForm>
 }

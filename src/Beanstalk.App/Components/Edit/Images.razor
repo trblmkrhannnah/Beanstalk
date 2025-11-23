@@ -15,20 +15,20 @@
         <Authorized>
             @if (_loading)
             {
-                <p class="text-center text-gray-600 text-lg py-12">Loading images...</p>
+                <p class="text-center text-gray-600 py-5">Loading images...</p>
             }
             else if (_profile is null)
             {
-                <div class="card-cute text-center py-12">
+                <div class="card-cute text-center py-5">
                     <p class="text-gray-600">Profile not found.</p>
                 </div>
             }
             else
             {
-                <h3 class="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-gray-900">Images</h3>
-                <p class="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8">Manage your profile images.</p>
+                <h3 class="h4 fw-bold mb-3 text-gray-900">Images</h3>
+                <p class="small text-gray-600 mb-4">Manage your profile images.</p>
 
-                <div class="space-y-6">
+                <div class="d-flex flex-column gap-4">
                     <!-- Stats Card -->
                     <div class="card-cute mb-6">
                         <div class="flex items-center justify-between mb-3 sm:mb-4">

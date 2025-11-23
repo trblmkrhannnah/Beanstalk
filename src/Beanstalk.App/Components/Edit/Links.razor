@@ -16,120 +16,120 @@
             <div @onclick="CloseMenuIfOutside">
             @if (_loading)
             {
-                <p class="text-center text-gray-600 text-lg py-12">Loading links...</p>
+                <p class="text-center text-gray-600 py-5">Loading links...</p>
             }
             else if (_profile is null || _user is null)
             {
-                <div class="card-cute text-center py-12">
+                <div class="card-cute text-center py-5">
                     <p class="text-gray-600">Profile not found.</p>
                 </div>
             }
             else
             {
                 <!-- Breadcrumbs -->
-                <nav class="mb-4" aria-label="Breadcrumb">
-                    <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                        <li><a href="/edit/links" class="hover:text-gray-900">Links</a></li>
+                <nav class="mb-3" aria-label="Breadcrumb">
+                    <ol class="d-flex align-items-center gap-2 small text-gray-600">
+                        <li><a href="/edit/links" class="text-decoration-none text-gray-600 hover-text-gray-900">Links</a></li>
                     </ol>
                 </nav>
 
-                <div class="flex items-center justify-between mb-6">
+                <div class="d-flex align-items-center justify-content-between mb-4">
                     <div>
-                        <h3 class="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">Links</h3>
-                        <p class="text-sm sm:text-base text-gray-600">Add and organize links for your profile page.</p>
+                        <h3 class="h4 fw-bold mb-2 text-gray-900">Links</h3>
+                        <p class="small text-gray-600">Add and organize links for your profile page.</p>
                     </div>
                     <button class="btn-primary" @onclick="NavigateToCreate" disabled="@(_links.Count >= 20)">
                         Create New Link
                     </button>
                 </div>
 
-                <div class="space-y-6">
+                <div class="d-flex flex-column gap-4">
                     <!-- Links List -->
                     @if (_links.Count == 0)
                     {
-                        <div class="card-cute text-center py-16 bg-gray-50">
-                            <h4 class="text-2xl font-semibold text-gray-800 mb-2">No Links Yet</h4>
-                            <p class="text-gray-600 mb-6">Add links to your social media, portfolio, or any other pages you want to share!</p>
+                        <div class="card-cute text-center py-5 bg-gray-50">
+                            <h4 class="h5 fw-semibold text-gray-800 mb-2">No Links Yet</h4>
+                            <p class="text-gray-600 mb-4">Add links to your social media, portfolio, or any other pages you want to share!</p>
                         </div>
                     }
                     else
                     {
-                        <div class="space-y-3">
+                        <div class="d-flex flex-column gap-3">
                             @for (int i = 0; i < _links.Count; i++)
                             {
                                 var link = _links[i];
                                 var index = i;
                                 var isValidUrl = !string.IsNullOrWhiteSpace(link.Url) && Uri.TryCreate(link.Url, UriKind.Absolute, out _);
                                 
-                                <div class="card-cute @(link.IsVisible ? "" : "opacity-60")">
-                                    <div class="flex items-center gap-4">
+                                <div class="card-cute @(link.IsVisible ? "" : "opacity-50")">
+                                    <div class="d-flex align-items-center gap-3">
                                         <!-- Up/Down Arrow Buttons -->
-                                        <div class="flex flex-col flex-shrink-0 gap-1">
-                                            <button class="p-1 text-gray-400 hover:text-gray-600 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+                                        <div class="d-flex flex-column flex-shrink-0" style="gap: 0.25rem;">
+                                            <button class="btn btn-sm btn-link p-1 text-gray-400 hover-text-gray-600 text-decoration-none" style="transition: color 0.2s;"
                                                     @onclick="(() => MoveLinkUp(index))"
                                                     disabled="@(index == 0)">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 </svg>
                                             </button>
-                                            <button class="p-1 text-gray-400 hover:text-gray-600 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+                                            <button class="btn btn-sm btn-link p-1 text-gray-400 hover-text-gray-600 text-decoration-none" style="transition: color 0.2s;"
                                                     @onclick="(() => MoveLinkDown(index))"
                                                     disabled="@(index == _links.Count - 1)">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                                 </svg>
                                             </button>
                                         </div>
 
                                         <!-- Link Content -->
-                                        <div class="flex-1 flex items-center justify-between">
-                                            <div class="flex-1">
+                                        <div class="flex-grow-1 d-flex align-items-center justify-content-between">
+                                            <div class="flex-grow-1">
                                                 @if (isValidUrl && !string.IsNullOrWhiteSpace(link.Title))
                                                 {
                                                     <a href="@link.Url" target="_blank" rel="noopener" 
-                                                       class="flex items-center gap-3 hover:text-indigo-600 transition-colors">
-                                                        <span class="font-semibold text-gray-800">@link.Title</span>
-                                                        <span class="text-xs text-gray-500 truncate max-w-md">@link.Url</span>
+                                                       class="d-flex align-items-center gap-3 text-decoration-none hover-text-indigo-600" style="transition: color 0.2s;">
+                                                        <span class="fw-semibold text-gray-800">@link.Title</span>
+                                                        <span class="small text-gray-500 text-truncate" style="max-width: 28rem;">@link.Url</span>
                                                         @if (!link.IsVisible)
                                                         {
-                                                            <span class="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">Hidden</span>
+                                                            <span class="badge bg-gray-200 text-gray-600">Hidden</span>
                                                         }
                                                         <span class="text-gray-400">→</span>
                                                     </a>
                                                 }
                                                 else
                                                 {
-                                                    <div class="flex items-center gap-3">
-                                                        <span class="font-semibold text-gray-400">@(string.IsNullOrWhiteSpace(link.Title) ? "Untitled Link" : link.Title)</span>
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <span class="fw-semibold text-gray-400">@(string.IsNullOrWhiteSpace(link.Title) ? "Untitled Link" : link.Title)</span>
                                                         @if (!link.IsVisible)
                                                         {
-                                                            <span class="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">Hidden</span>
+                                                            <span class="badge bg-gray-200 text-gray-600">Hidden</span>
                                                         }
                                                     </div>
                                                 }
                                             </div>
 
                                             <!-- Three Dots Menu -->
-                                            <div class="relative flex-shrink-0" @onclick:stopPropagation="true">
-                                                <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" 
+                                            <div class="position-relative flex-shrink-0" @onclick:stopPropagation="true">
+                                                <button class="btn btn-sm btn-link p-2 text-gray-400 hover-text-gray-600 hover-bg-gray-100 rounded text-decoration-none" style="transition: all 0.2s;"
                                                         @onclick="(() => ToggleMenu(link.Id))">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
                                                     </svg>
                                                 </button>
 
                                                 @if (_openMenuId == link.Id)
                                                 {
-                                                    <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                                                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" 
+                                                    <div class="position-absolute end-0 mt-2 bg-white rounded shadow-lg border border-gray-200 py-1 z-50" style="width: 12rem;">
+                                                        <button class="btn btn-link w-100 text-start px-3 py-2 small text-gray-700 hover-bg-gray-100 text-decoration-none" style="transition: background-color 0.2s;"
                                                                 @onclick="(() => ToggleVisibility(link))">
                                                             @(link.IsVisible ? "Disable" : "Enable")
                                                         </button>
-                                                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" 
+                                                        <button class="btn btn-link w-100 text-start px-3 py-2 small text-gray-700 hover-bg-gray-100 text-decoration-none" style="transition: background-color 0.2s;"
                                                                 @onclick="(() => NavigateToEdit(link.Id))">
                                                             Edit
                                                         </button>
-                                                        <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors" 
+                                                        <button class="btn btn-link w-100 text-start px-3 py-2 small text-red-600 hover-bg-red-50 text-decoration-none" style="transition: background-color 0.2s;"
                                                                 @onclick="(() => DeleteLink(link))">
                                                             Delete
                                                         </button>

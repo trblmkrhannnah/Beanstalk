@@ -15,17 +15,17 @@
         <Authorized>
             @if (_loading)
             {
-                <p class="text-center text-gray-600 text-lg py-12">Loading...</p>
+                <p class="text-center text-gray-600 py-5">Loading...</p>
             }
             else if (_profile is null)
             {
-                <div class="card-cute text-center py-12">
+                <div class="card-cute text-center py-5">
                     <p class="text-gray-600">Profile not found.</p>
                 </div>
             }
             else if (_images.Count >= _maxImages)
             {
-                <div class="card-cute text-center py-12">
+                <div class="card-cute text-center py-5">
                     <p class="text-red-500 mb-4">You have reached the maximum number of images allowed (@_maxImages).</p>
                     <p class="text-gray-600 mb-6">Please delete existing images to upload new ones.</p>
                     <button class="btn-primary" @onclick="NavigateToImages">
@@ -55,12 +55,12 @@
                     }
 
                     <div class="card-cute">
-                        <div class="space-y-4">
+                        <div class="d-flex flex-column gap-3">
                             <div>
                                 <label for="imageFile" class="block text-sm font-medium text-gray-700 mb-2">
                                     Select an Image
                                 </label>
-                                <div class="relative">
+                                <div class="position-relative">
                                     <input type="file" 
                                            id="imageFile" 
                                            class="input-cute cursor-pointer" 
